@@ -1,2 +1,2 @@
-# TradingWithSR
-Cryptocurrency Trading with Symbolic Regression for Optimizing Evaluation Metrics
+# GenTradingRuleWithGP
+Generating Trading Rules with Genetic Programming
