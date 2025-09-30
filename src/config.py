@@ -2,6 +2,9 @@
 
 import operator
 
+# --- 랜덤 시드 ---
+RANDOM_SEED = 20
+
 # --- 유전 프로그래밍 기본 재료 ---
 INDICATORS = ["RSI", "SMA", "MACD", "ATR", "BB"]  # 지표
 INDICATOR_PARAMS = [5, 10, 14, 20, 30, 50, 100, 150, 200]  # 지표 파라미터

@@ -20,7 +20,7 @@ def main():
     """메인 실행 함수"""
     # 환경 설정
     output_dir = setup_logging()
-    random.seed(20)
+    random.seed(config.RANDOM_SEED)
 
     # DEAP 기본 creator 설정
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
