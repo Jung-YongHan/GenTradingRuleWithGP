@@ -1,0 +1,326 @@
+---
+alwaysApply: true
+---
+
+# GenTradingRuleWithGP - 유전 프로그래밍을 이용한 트레이딩 룰 생성 프로젝트
+
+## 프로젝트 개요
+이 프로젝트는 **유전 프로그래밍(Genetic Programming, GP)**을 사용하여 최적의 트레이딩 룰을 자동으로 생성하는 연구 프로젝트입니다. DEAP 라이브러리를 기반으로 구현되었으며, 기술적 지표와 논리 연산자를 조합하여 복잡한 트레이딩 전략을 진화시킵니다.
+
+## 연구 목적 및 방법
+- **목적**: 금융 시장에서 수익을 극대화하는 트레이딩 룰을 자동으로 발견
+- **방법**: 유전 프로그래밍을 통한 진화적 알고리즘으로 트레이딩 룰 최적화
+- **특징**: 
+  - 도메인 특화 설계 (매수/매도 로직 분리)
+  - 커스텀 교배/돌연변이 연산자
+  - 타입 안전한 GP 트리 구조
+  - JSON 형태의 결과 출력
+
+## 프로젝트 구조
+
+### 핵심 모듈
+```
+src/
+├── main.py                 # 메인 실행 파일
+├── config.py              # 설정 파일
+├── gp_setup/              # GP 핵심 설정
+│   ├── domain.py          # 도메인 타입 및 조건 관리
+│   ├── toolbox.py         # GP 도구상자 생성
+│   └── genetics.py        # 커스텀 유전 연산자
+└── utils/                 # 유틸리티 함수들
+    ├── parsing.py         # GP 트리 파싱 및 평가
+    └── file_handler.py    # 파일 저장 및 시각화
+```
+
+### 주요 컴포넌트
+
+#### 1. Domain Layer (domain.py)
+- **BuyType/SellType**: 매수/매도 조건 타입
+- **Strategy**: 트레이딩 전략 함수
+- **ConditionManager**: 100개 트레이딩 조건 생성 및 관리
+  - 50개 매수 조건 + 50개 매도 조건
+  - RSI, SMA, MACD, ATR, BB 지표 사용
+  - 랜덤 파라미터 및 임계값 생성
+
+#### 2. GP Setup Layer (toolbox.py)
+- **create_primitive_set()**: GP 함수와 터미널 정의
+  - Strategy 함수: [BuyType, SellType] → object
+  - 논리 연산자: and_, or_, not_ (매수/매도용)
+  - 터미널: buy_system1~50, sell_system1~50
+- **create_toolbox()**: 진화 연산자 등록
+  - 개체 생성: expr_init, individual, population
+  - 진화 연산: evaluate, select, mate, mutate
+
+#### 3. Genetics Layer (genetics.py)
+- **custom_crossover()**: 도메인 특화 교배 연산자
+  - 매수/매도 서브트리 분리 교배
+  - 타입 안전성 보장
+- **custom_mutation()**: 도메인 특화 돌연변이 연산자
+  - 서브트리 내 타입별 돌연변이
+
+#### 4. Utilities Layer
+- **parsing.py**: 
+  - eval_func(): 개체 적합도 평가 (현재 랜덤)
+  - parse_gp_tree_to_json(): GP 트리를 JSON으로 변환
+- **file_handler.py**:
+  - setup_logging(): 로깅 설정 및 출력 폴더 생성
+  - save_json_strategy(): JSON 전략 저장
+  - visualize_tree(): GP 트리 시각화 (PNG)
+
+## 진화 과정
+1. **초기화**: 100개 개체군 생성 (GP 트리)
+2. **평가**: 각 개체의 적합도 계산
+3. **진화 루프** (20세대):
+   - 선택: 토너먼트 선택 (tournsize=3)
+   - 교배: 80% 확률로 커스텀 교배
+   - 돌연변이: 15% 확률로 커스텀 돌연변이
+   - 재평가: 변한 개체들만 재평가
+4. **결과**: 최적 개체를 JSON 및 시각화로 출력
+
+## 설정 파라미터 (config.py)
+- **진화 파라미터**: N_POPULATION=100, N_GENERATION=20
+- **확률**: CROSSOVER_PROBABILITY=0.8, MUTATION_PROBABILITY=0.15
+- **트리 구조**: INITIAL_MIN_DEPTH=2, INITIAL_MAX_DEPTH=6
+- **지표**: RSI, SMA, MACD, ATR, BB
+- **파라미터**: 5, 10, 14, 20, 30, 50, 100, 150, 200
+
+## 코드 스타일 및 규칙
+
+### 네이밍 컨벤션
+- **클래스**: PascalCase (ConditionManager, BuyType)
+- **함수**: snake_case (create_primitive_set, eval_func)
+- **상수**: UPPER_SNAKE_CASE (N_POPULATION, INDICATORS)
+- **변수**: snake_case (condition_manager, best_ind)
+
+### 타입 힌트
+- 모든 함수에 타입 힌트 사용
+- 복잡한 타입은 typing 모듈 활용
+- DEAP 타입과 호환성 유지
+
+### 에러 처리
+- 로깅을 통한 상세한 에러 메시지
+- try-except로 파일 I/O 보호
+- 유효성 검사 (개체 구조, 트리 크기 등)
+
+### 모듈화 원칙
+- 단일 책임 원칙: 각 모듈은 명확한 역할
+- 의존성 주입: config를 통한 설정 관리
+- 인터페이스 분리: DEAP 표준 인터페이스 사용
+
+## 개발 가이드라인
+
+### 새 기능 추가 시
+1. **도메인 로직**: gp_setup/domain.py에 추가
+2. **GP 연산자**: gp_setup/genetics.py에 추가
+3. **유틸리티**: utils/ 디렉토리에 추가
+4. **설정**: config.py에 상수 추가
+
+### 디버깅 및 테스트
+- 로깅을 통한 실행 과정 추적
+- 시각화를 통한 GP 트리 구조 확인
+- JSON 출력을 통한 결과 검증
+
+### 성능 최적화
+- 적합도 재계산 최소화 (fitness.valid 활용)
+- 커스텀 연산자로 도메인 특화 최적화
+- 메모리 효율적인 트리 구조
+
+## 주요 개념 설명
+
+### Primitive vs Terminal
+- **Primitive**: 함수 (Strategy, and_, or_, not_)
+- **Terminal**: 상수 (buy_system1, sell_system2, ...)
+- **PrimitiveSet**: 함수와 상수들의 집합
+
+### 타입 시스템
+- **BuyType**: 매수 관련 모든 타입 (개별 조건 + 복합 로직)
+- **SellType**: 매도 관련 모든 타입 (개별 조건 + 복합 로직)
+- **object**: 최종 전략 타입
+
+### 진화 연산자
+- **선택**: 토너먼트 선택으로 다양성 유지
+- **교배**: 매수/매도 로직 분리로 타입 안전성 보장
+- **돌연변이**: 서브트리 교체로 지역적 탐색
+
+## 대화 시 활용 가이드
+
+### 질문 유형별 대응
+1. **구조 질문**: 프로젝트 구조 및 모듈 역할 설명
+2. **기술 질문**: GP, DEAP, 타입 시스템 등 기술적 내용
+3. **개선 질문**: 성능, 확장성, 유지보수성 개선 방안
+4. **설명 질문**: PPT, 문서화, 시각화 방법
+
+### 코드 예시 제공 시
+- 실제 프로젝트 코드 기반으로 설명
+- 타입 힌트와 주석 포함
+- 에러 처리 및 로깅 고려
+- DEAP 라이브러리 호환성 유지
+
+### 문제 해결 시
+- 로깅을 통한 디버깅 방법 제안
+- 시각화를 통한 구조 확인 방법
+- 설정 파라미터 조정 방안
+- 성능 최적화 전략
+
+이 규칙을 따라 프로젝트의 일관성과 품질을 유지하며, 효율적인 개발과 유지보수를 지원합니다.
+# GenTradingRuleWithGP - 유전 프로그래밍을 이용한 트레이딩 룰 생성 프로젝트
+
+## 프로젝트 개요
+이 프로젝트는 **유전 프로그래밍(Genetic Programming, GP)**을 사용하여 최적의 트레이딩 룰을 자동으로 생성하는 연구 프로젝트입니다. DEAP 라이브러리를 기반으로 구현되었으며, 기술적 지표와 논리 연산자를 조합하여 복잡한 트레이딩 전략을 진화시킵니다.
+
+## 연구 목적 및 방법
+- **목적**: 금융 시장에서 수익을 극대화하는 트레이딩 룰을 자동으로 발견
+- **방법**: 유전 프로그래밍을 통한 진화적 알고리즘으로 트레이딩 룰 최적화
+- **특징**: 
+  - 도메인 특화 설계 (매수/매도 로직 분리)
+  - 커스텀 교배/돌연변이 연산자
+  - 타입 안전한 GP 트리 구조
+  - JSON 형태의 결과 출력
+
+## 프로젝트 구조
+
+### 핵심 모듈
+```
+src/
+├── main.py                 # 메인 실행 파일
+├── config.py              # 설정 파일
+├── gp_setup/              # GP 핵심 설정
+│   ├── domain.py          # 도메인 타입 및 조건 관리
+│   ├── toolbox.py         # GP 도구상자 생성
+│   └── genetics.py        # 커스텀 유전 연산자
+└── utils/                 # 유틸리티 함수들
+    ├── parsing.py         # GP 트리 파싱 및 평가
+    └── file_handler.py    # 파일 저장 및 시각화
+```
+
+### 주요 컴포넌트
+
+#### 1. Domain Layer (domain.py)
+- **BuyType/SellType**: 매수/매도 조건 타입
+- **Strategy**: 트레이딩 전략 함수
+- **ConditionManager**: 100개 트레이딩 조건 생성 및 관리
+  - 50개 매수 조건 + 50개 매도 조건
+  - RSI, SMA, MACD, ATR, BB 지표 사용
+  - 랜덤 파라미터 및 임계값 생성
+
+#### 2. GP Setup Layer (toolbox.py)
+- **create_primitive_set()**: GP 함수와 터미널 정의
+  - Strategy 함수: [BuyType, SellType] → object
+  - 논리 연산자: and_, or_, not_ (매수/매도용)
+  - 터미널: buy_system1~50, sell_system1~50
+- **create_toolbox()**: 진화 연산자 등록
+  - 개체 생성: expr_init, individual, population
+  - 진화 연산: evaluate, select, mate, mutate
+
+#### 3. Genetics Layer (genetics.py)
+- **custom_crossover()**: 도메인 특화 교배 연산자
+  - 매수/매도 서브트리 분리 교배
+  - 타입 안전성 보장
+- **custom_mutation()**: 도메인 특화 돌연변이 연산자
+  - 서브트리 내 타입별 돌연변이
+
+#### 4. Utilities Layer
+- **parsing.py**: 
+  - eval_func(): 개체 적합도 평가 (현재 랜덤)
+  - parse_gp_tree_to_json(): GP 트리를 JSON으로 변환
+- **file_handler.py**:
+  - setup_logging(): 로깅 설정 및 출력 폴더 생성
+  - save_json_strategy(): JSON 전략 저장
+  - visualize_tree(): GP 트리 시각화 (PNG)
+
+## 진화 과정
+1. **초기화**: 100개 개체군 생성 (GP 트리)
+2. **평가**: 각 개체의 적합도 계산
+3. **진화 루프** (20세대):
+   - 선택: 토너먼트 선택 (tournsize=3)
+   - 교배: 80% 확률로 커스텀 교배
+   - 돌연변이: 15% 확률로 커스텀 돌연변이
+   - 재평가: 변한 개체들만 재평가
+4. **결과**: 최적 개체를 JSON 및 시각화로 출력
+
+## 설정 파라미터 (config.py)
+- **진화 파라미터**: N_POPULATION=100, N_GENERATION=20
+- **확률**: CROSSOVER_PROBABILITY=0.8, MUTATION_PROBABILITY=0.15
+- **트리 구조**: INITIAL_MIN_DEPTH=2, INITIAL_MAX_DEPTH=6
+- **지표**: RSI, SMA, MACD, ATR, BB
+- **파라미터**: 5, 10, 14, 20, 30, 50, 100, 150, 200
+
+## 코드 스타일 및 규칙
+
+### 네이밍 컨벤션
+- **클래스**: PascalCase (ConditionManager, BuyType)
+- **함수**: snake_case (create_primitive_set, eval_func)
+- **상수**: UPPER_SNAKE_CASE (N_POPULATION, INDICATORS)
+- **변수**: snake_case (condition_manager, best_ind)
+
+### 타입 힌트
+- 모든 함수에 타입 힌트 사용
+- 복잡한 타입은 typing 모듈 활용
+- DEAP 타입과 호환성 유지
+
+### 에러 처리
+- 로깅을 통한 상세한 에러 메시지
+- try-except로 파일 I/O 보호
+- 유효성 검사 (개체 구조, 트리 크기 등)
+
+### 모듈화 원칙
+- 단일 책임 원칙: 각 모듈은 명확한 역할
+- 의존성 주입: config를 통한 설정 관리
+- 인터페이스 분리: DEAP 표준 인터페이스 사용
+
+## 개발 가이드라인
+
+### 새 기능 추가 시
+1. **도메인 로직**: gp_setup/domain.py에 추가
+2. **GP 연산자**: gp_setup/genetics.py에 추가
+3. **유틸리티**: utils/ 디렉토리에 추가
+4. **설정**: config.py에 상수 추가
+
+### 디버깅 및 테스트
+- 로깅을 통한 실행 과정 추적
+- 시각화를 통한 GP 트리 구조 확인
+- JSON 출력을 통한 결과 검증
+
+### 성능 최적화
+- 적합도 재계산 최소화 (fitness.valid 활용)
+- 커스텀 연산자로 도메인 특화 최적화
+- 메모리 효율적인 트리 구조
+
+## 주요 개념 설명
+
+### Primitive vs Terminal
+- **Primitive**: 함수 (Strategy, and_, or_, not_)
+- **Terminal**: 상수 (buy_system1, sell_system2, ...)
+- **PrimitiveSet**: 함수와 상수들의 집합
+
+### 타입 시스템
+- **BuyType**: 매수 관련 모든 타입 (개별 조건 + 복합 로직)
+- **SellType**: 매도 관련 모든 타입 (개별 조건 + 복합 로직)
+- **object**: 최종 전략 타입
+
+### 진화 연산자
+- **선택**: 토너먼트 선택으로 다양성 유지
+- **교배**: 매수/매도 로직 분리로 타입 안전성 보장
+- **돌연변이**: 서브트리 교체로 지역적 탐색
+
+## 대화 시 활용 가이드
+
+### 질문 유형별 대응
+1. **구조 질문**: 프로젝트 구조 및 모듈 역할 설명
+2. **기술 질문**: GP, DEAP, 타입 시스템 등 기술적 내용
+3. **개선 질문**: 성능, 확장성, 유지보수성 개선 방안
+4. **설명 질문**: PPT, 문서화, 시각화 방법
+
+### 코드 예시 제공 시
+- 실제 프로젝트 코드 기반으로 설명
+- 타입 힌트와 주석 포함
+- 에러 처리 및 로깅 고려
+- DEAP 라이브러리 호환성 유지
+
+### 문제 해결 시
+- 로깅을 통한 디버깅 방법 제안
+- 시각화를 통한 구조 확인 방법
+- 설정 파라미터 조정 방안
+- 성능 최적화 전략
+
+이 규칙을 따라 프로젝트의 일관성과 품질을 유지하며, 효율적인 개발과 유지보수를 지원합니다.
