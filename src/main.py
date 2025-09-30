@@ -13,7 +13,7 @@ import config
 from gp_setup.domain import ConditionManager
 from gp_setup.toolbox import create_primitive_set, create_toolbox
 from utils.file_handler import save_json_strategy, setup_logging, visualize_tree
-from utils.parsing import parse_gp_tree_to_json
+from utils.parsing import modify_json_for_trader, parse_gp_tree_to_json
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
     # GP 환경 설정
     condition_manager = ConditionManager(config.INITIAL_CONDITIONS_COUNT)
     pset = create_primitive_set(condition_manager)
-    toolbox = create_toolbox(pset)
+    toolbox = create_toolbox(pset, condition_manager)
 
     # (이하 코드는 이전과 동일)
     # 진화 시작
@@ -75,7 +75,8 @@ def main():
     logging.info("🏆 최종 최적 전략 탐색 완료!")
 
     best_ind = tools.selBest(pop, 1)[0]
-    final_json_strategy = parse_gp_tree_to_json(best_ind, condition_manager)
+    raw_json_strategy = parse_gp_tree_to_json(best_ind, condition_manager)
+    final_json_strategy = modify_json_for_trader(raw_json_strategy)
 
     logging.info(f"최적 개체 트리 구조 (크기: {len(best_ind)}):\n{str(best_ind)}")
     logging.info(f"최고 적합도: {best_ind.fitness.values[0]:.2f}")

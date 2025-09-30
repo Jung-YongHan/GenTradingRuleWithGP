@@ -32,7 +32,7 @@ def create_primitive_set(condition_manager):
     return pset
 
 
-def create_toolbox(pset):
+def create_toolbox(pset, condition_manager=None):
     """Toolbox를 생성하고 구성합니다."""
     toolbox = base.Toolbox()
     toolbox.register(
@@ -48,7 +48,12 @@ def create_toolbox(pset):
     )
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-    toolbox.register("evaluate", eval_func)
+    # condition_manager를 전달할 수 있도록 lambda 함수로 래핑
+    if condition_manager is not None:
+        toolbox.register("evaluate", lambda ind: eval_func(ind, condition_manager))
+    else:
+        toolbox.register("evaluate", eval_func)
+
     toolbox.register("select", tools.selTournament, tournsize=3)
     toolbox.register("mate", custom_crossover)
     toolbox.register("mutate", custom_mutation, pset=pset)
