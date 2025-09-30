@@ -1,4 +1,4 @@
-# gp_setup/genetics.py
+# gp/operators.py
 
 import random
 

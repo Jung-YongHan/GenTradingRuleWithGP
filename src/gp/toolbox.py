@@ -1,13 +1,14 @@
-# gp_setup/toolbox.py
+# gp/toolbox.py
 
 import operator
 
 from deap import base, creator, gp, tools
 
 from config import INITIAL_MAX_DEPTH, INITIAL_MIN_DEPTH
-from gp_setup.domain import BuyType, SellType, Strategy
-from gp_setup.genetics import custom_crossover, custom_mutation
-from utils.parsing import eval_func
+from domain.types import BuyType, SellType, Strategy
+
+from .evaluator import eval_func
+from .operators import custom_crossover, custom_mutation
 
 
 def create_primitive_set(condition_manager):
