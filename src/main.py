@@ -12,7 +12,15 @@ from domain.condition import ConditionManager
 from gp.toolbox import create_primitive_set, create_toolbox
 from strategy.parser import parse_gp_tree_to_json
 from strategy.validator import validate_and_clean_strategy
-from utils.file_handler import save_json_strategy, setup_logging, visualize_tree
+from utils.file_handler import (
+    save_json_strategy,
+    setup_logging,
+    visualize_tree,
+)
+from utils.visualizer import (
+    visualize_evolution,
+    visualize_fitness_distribution,
+)
 
 
 def main():
@@ -43,9 +51,13 @@ def main():
 
     logging.info("=" * 60)
     logging.info(
-        f"🚀 유전 프로그래밍 진화 시작! (세대: {config.N_GENERATION}, 개체수: {config.N_POPULATION})"
+        f"🚀 유전 프로그래밍 진화 시작! "
+        f"(세대: {config.N_GENERATION}, 개체수: {config.N_POPULATION})"
     )
     logging.info("=" * 60)
+
+    # 통계 수집을 위한 리스트
+    stats_history = []
 
     for g in range(config.N_GENERATION):
         offspring = toolbox.select(pop, len(pop))
@@ -67,8 +79,24 @@ def main():
 
         pop[:] = offspring
         fits = [ind.fitness.values[0] for ind in pop]
+
+        # 통계 계산 및 저장
+        max_fit = max(fits)
+        avg_fit = sum(fits) / len(pop)
+        min_fit = min(fits)
+        std_fit = (sum((x - avg_fit) ** 2 for x in fits) / len(fits)) ** 0.5
+
+        stats_history.append({
+            'generation': g + 1,
+            'max': max_fit,
+            'avg': avg_fit,
+            'min': min_fit,
+            'std': std_fit
+        })
+
         logging.info(
-            f"> 세대 {g+1:02d}: 최고={max(fits):.2f}, 평균={sum(fits)/len(pop):.2f}"
+            f"> 세대 {g+1:02d}: 최고={max_fit:.2f}, "
+            f"평균={avg_fit:.2f}, 최저={min_fit:.2f}"
         )
 
     # 4. 최종 결과 처리
@@ -82,8 +110,16 @@ def main():
     logging.info(f"최적 개체 트리 구조 (크기: {len(best_ind)}):\n{str(best_ind)}")
     logging.info(f"최고 적합도: {best_ind.fitness.values[0]:.2f}")
 
+    # 진화 과정 시각화
+    logging.info("=" * 60)
+    logging.info("📊 진화 과정 시각화 생성 중...")
+    visualize_evolution(stats_history, output_dir)
+    visualize_fitness_distribution(pop, output_dir)
+
     if final_json_strategy:
-        json_output = json.dumps(final_json_strategy, indent=4, ensure_ascii=False)
+        json_output = json.dumps(
+            final_json_strategy, indent=4, ensure_ascii=False
+        )
         logging.info(f"[ 최종 JSON 출력 ]\n{json_output}")
         save_json_strategy(final_json_strategy, output_dir)
         visualize_tree(best_ind, output_dir)

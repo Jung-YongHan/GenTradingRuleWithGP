@@ -7,7 +7,6 @@ debugpy @ file:///home/task_175706710974480/conda-bld/debugpy_1757067125926/work
 decorator @ file:///home/conda/feedstock_root/build_artifacts/decorator_1740384970518/work
 exceptiongroup @ file:///home/conda/feedstock_root/build_artifacts/exceptiongroup_1746947292760/work
 executing @ file:///home/conda/feedstock_root/build_artifacts/executing_1756729339227/work
--e git+https://github.com/Jung-YongHan/GenTradingRuleWithGP.git@267c1de6cfcf2d7417e23aa4858c6f3fa605d37c#egg=GenTradingRuleWithGP
 importlib_metadata @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_importlib-metadata_1747934053/work
 ipykernel @ file:///home/conda/feedstock_root/build_artifacts/ipykernel_1754352855579/work
 ipython @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_ipython_1756474504/work
