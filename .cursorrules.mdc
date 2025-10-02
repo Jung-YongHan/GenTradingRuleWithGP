@@ -1,3 +1,113 @@
+---
+alwaysApply: true
+---
+
+# GenTradingRuleWithGP - Cursor Rules
+
+## 프로젝트 개요
+유전 프로그래밍(Genetic Programming)을 사용하여 거래 전략 규칙을 자동 생성하는 프로젝트입니다. DEAP 라이브러리를 활용하여 기술적 지표 기반의 매수/매도 시스템을 진화시킵니다.
+
+## 코딩 스타일 및 규칙
+
+### 1. 코드 스타일
+- **언어**: Python 3.12+
+- **포맷팅**: Black 코드 포맷터 사용
+- **타입 힌트**: 가능한 모든 함수에 타입 힌트 추가
+- **문서화**: 모든 클래스와 함수에 docstring 작성 (Google 스타일)
+- **네이밍**: 
+  - 변수/함수: snake_case
+  - 클래스: PascalCase
+  - 상수: UPPER_SNAKE_CASE
+
+### 2. 프로젝트 구조
+```
+src/
+├── main.py                 # 메인 실행 파일
+├── configs/                # 설정 파일들
+│   ├── constants.py        # 상수 정의
+│   ├── gp_configs.py       # GP 알고리즘 설정
+│   └── indicator_configs.py # 지표 설정
+├── domain/                 # 도메인 모델
+│   ├── condition.py        # 조건 관리
+│   ├── indicator.py        # 지표 정의
+│   └── types.py           # 타입 정의
+├── gp/                    # 유전 프로그래밍
+│   ├── evaluator.py       # 적합도 평가
+│   ├── operators.py       # GP 연산자
+│   └── toolbox.py         # DEAP 툴박스
+├── strategy/              # 전략 관련
+│   ├── formatter.py       # 전략 포맷팅
+│   ├── parser.py          # GP 트리 파싱
+│   └── validator.py       # 전략 검증
+└── utils/                 # 유틸리티
+    ├── file_handler.py    # 파일 처리
+    └── visualizer.py      # 시각화
+```
+
+### 3. 핵심 라이브러리
+- **DEAP**: 유전 프로그래밍 프레임워크
+- **Plotly**: 인터랙티브 시각화
+- **NumPy/Pandas**: 수치 계산 및 데이터 처리
+- **Pydot**: 트리 구조 시각화
+
+### 4. 개발 가이드라인
+
+#### GP 관련 코드
+- `gp/toolbox.py`: DEAP 툴박스 설정, multiprocessing 고려
+- `gp/evaluator.py`: 적합도 평가 함수 (현재는 랜덤, 실제 Trader 연동 예정)
+- `gp/operators.py`: 교차/변이 연산자 커스터마이징
+
+#### 설정 관리
+- 모든 설정은 `configs/` 디렉토리에서 관리
+- `constants.py`: 전역 상수
+- `gp_configs.py`: GP 알고리즘 파라미터
+- `indicator_configs.py`: 기술적 지표 정의
+
+#### 성능 최적화
+- **Multiprocessing**: 현재 평가 함수가 가벼워서 오버헤드가 큼
+- **CPU 사용량**: `configs/constants.py`의 `CPU_COUNT`로 제어
+- **메모리 관리**: 대용량 개체군 처리 시 메모리 사용량 모니터링
+
+### 5. 로깅 및 시각화
+- **로깅**: `utils/file_handler.py`의 `setup_logging()` 사용
+- **시각화**: `utils/visualizer.py`에서 Plotly 기반 인터랙티브 그래프 생성
+- **출력**: `logs/YYYY-MM-DD/run_HH-MM-SS/` 디렉토리에 결과 저장
+
+### 6. 테스트 및 검증
+- **전략 검증**: `strategy/validator.py`에서 JSON 전략 유효성 검사
+- **트리 파싱**: `strategy/parser.py`에서 GP 트리를 JSON으로 변환
+- **타입 안전성**: `domain/types.py`에서 강타입 시스템 사용
+
+### 7. 주의사항
+- **Multiprocessing**: lambda 함수는 pickle 불가능하므로 전역 함수 사용
+- **메모리**: 대용량 개체군(1000+) 처리 시 메모리 사용량 주의
+- **성능**: 평가 함수가 가벼우면 multiprocessing 비활성화 고려
+- **시각화**: Plotly 그래프는 HTML로 저장되어 브라우저에서 확인
+
+### 8. 확장 계획
+- **Trader 연동**: `gp/evaluator.py`의 `evaluate_with_trader()` 함수 구현
+- **더 많은 지표**: `configs/indicator_configs.py`에 새로운 지표 추가
+- **실시간 모니터링**: 진화 과정 실시간 시각화
+- **백테스팅**: 생성된 전략의 성과 검증
+
+### 9. 디버깅 팁
+- 로그 파일에서 진화 과정 추적
+- `visualizer.py`의 그래프로 수렴성 확인
+- `strategy/validator.py`로 생성된 전략 유효성 검사
+- CPU 사용량과 성능의 트레이드오프 고려
+
+### 10. 커밋 메시지 규칙
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+**타입**: feat, fix, docs, style, refactor, test, chore
+**스코프**: gp, strategy, config, utils, domain
+**예시**: `feat(gp): add multiprocessing support for evaluation`
 # GenTradingRuleWithGP - Cursor Rules
 
 ## 프로젝트 개요
