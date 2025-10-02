@@ -1,328 +1,106 @@
----
-alwaysApply: true
----
-
-# GenTradingRuleWithGP - 유전 프로그래밍을 이용한 트레이딩 룰 생성 프로젝트
+# GenTradingRuleWithGP - Cursor Rules
 
 ## 프로젝트 개요
-이 프로젝트는 **유전 프로그래밍(Genetic Programming, GP)**을 사용하여 최적의 트레이딩 룰을 자동으로 생성하는 연구 프로젝트입니다. DEAP 라이브러리를 기반으로 구현되었으며, 기술적 지표와 논리 연산자를 조합하여 복잡한 트레이딩 전략을 진화시킵니다.
+유전 프로그래밍(Genetic Programming)을 사용하여 거래 전략 규칙을 자동 생성하는 프로젝트입니다. DEAP 라이브러리를 활용하여 기술적 지표 기반의 매수/매도 시스템을 진화시킵니다.
 
-## 연구 목적 및 방법
-- **목적**: 금융 시장에서 수익을 극대화하는 트레이딩 룰을 자동으로 발견
-- **방법**: 유전 프로그래밍을 통한 진화적 알고리즘으로 트레이딩 룰 최적화
-- **특징**: 
-  - 도메인 특화 설계 (매수/매도 로직 분리)
-  - 커스텀 교배/돌연변이 연산자
-  - 타입 안전한 GP 트리 구조
-  - JSON 형태의 결과 출력
-  - 모듈별 단일 책임 원칙 적용
+## 코딩 스타일 및 규칙
 
-## 프로젝트 구조 (리팩토링 완료)
+### 1. 코드 스타일
+- **언어**: Python 3.12+
+- **포맷팅**: Black 코드 포맷터 사용
+- **타입 힌트**: 가능한 모든 함수에 타입 힌트 추가
+- **문서화**: 모든 클래스와 함수에 docstring 작성 (Google 스타일)
+- **네이밍**: 
+  - 변수/함수: snake_case
+  - 클래스: PascalCase
+  - 상수: UPPER_SNAKE_CASE
 
-### 핵심 모듈
+### 2. 프로젝트 구조
 ```
 src/
-├── main.py                  # 메인 실행 파일
-├── config.py               # 설정 파일
-│
-├── domain/                 # 도메인 레이어 (비즈니스 로직)
-│   ├── types.py           # GP 타입 정의 (BuyType, SellType, Strategy)
-│   ├── indicator.py       # 지표 생성 로직 (IndicatorGenerator)
-│   └── condition.py       # 조건 관리 로직 (ConditionManager)
-│
-├── gp/                     # GP 레이어 (유전 프로그래밍)
-│   ├── toolbox.py         # GP 도구상자 생성 및 설정
-│   ├── operators.py       # 커스텀 유전 연산자 (교배/변이)
-│   └── evaluator.py       # 적합도 평가 함수
-│
-├── strategy/               # 전략 레이어 (전략 처리)
-│   ├── parser.py          # GP 트리 → JSON 변환
-│   ├── validator.py       # JSON 검증 및 정리
-│   └── formatter.py       # JSON 포맷팅 (번호 재정렬 등)
-│
-└── utils/                  # 유틸리티 레이어
-    ├── file_handler.py    # 파일 I/O 및 시각화
-    └── helpers.py         # 공통 헬퍼 함수
+├── main.py                 # 메인 실행 파일
+├── configs/                # 설정 파일들
+│   ├── constants.py        # 상수 정의
+│   ├── gp_configs.py       # GP 알고리즘 설정
+│   └── indicator_configs.py # 지표 설정
+├── domain/                 # 도메인 모델
+│   ├── condition.py        # 조건 관리
+│   ├── indicator.py        # 지표 정의
+│   └── types.py           # 타입 정의
+├── gp/                    # 유전 프로그래밍
+│   ├── evaluator.py       # 적합도 평가
+│   ├── operators.py       # GP 연산자
+│   └── toolbox.py         # DEAP 툴박스
+├── strategy/              # 전략 관련
+│   ├── formatter.py       # 전략 포맷팅
+│   ├── parser.py          # GP 트리 파싱
+│   └── validator.py       # 전략 검증
+└── utils/                 # 유틸리티
+    ├── file_handler.py    # 파일 처리
+    └── visualizer.py      # 시각화
 ```
 
-### 모듈별 책임
+### 3. 핵심 라이브러리
+- **DEAP**: 유전 프로그래밍 프레임워크
+- **Plotly**: 인터랙티브 시각화
+- **NumPy/Pandas**: 수치 계산 및 데이터 처리
+- **Pydot**: 트리 구조 시각화
 
-#### 1. Domain Layer (`domain/`)
-**핵심 역할**: 트레이딩 도메인의 비즈니스 로직 관리
+### 4. 개발 가이드라인
 
-- **types.py**: GP 타입 정의
-  - `BuyType`: 매수 조건 타입
-  - `SellType`: 매도 조건 타입
-  - `Strategy(buy, sell)`: 트레이딩 전략 함수
+#### GP 관련 코드
+- `gp/toolbox.py`: DEAP 툴박스 설정, multiprocessing 고려
+- `gp/evaluator.py`: 적합도 평가 함수 (현재는 랜덤, 실제 Trader 연동 예정)
+- `gp/operators.py`: 교차/변이 연산자 커스터마이징
 
-- **indicator.py**: 지표 생성 관리
-  - `IndicatorGenerator`: 지표 생성 클래스
-  - `get_unique_indicator_name()`: 고유 지표명 생성 (RSI1, RSI2, ...)
-  - `generate_sources_for_indicator()`: 지표별 소스 생성
-  - `generate_all_params_for_indicator()`: 지표별 파라미터 생성
-  - `generate_vars()`: vars 딕셔너리 생성
+#### 설정 관리
+- 모든 설정은 `configs/` 디렉토리에서 관리
+- `constants.py`: 전역 상수
+- `gp_configs.py`: GP 알고리즘 파라미터
+- `indicator_configs.py`: 기술적 지표 정의
 
-- **condition.py**: 조건 생성 및 관리
-  - `ConditionManager`: 매수/매도 조건 관리 클래스
-  - 50개 매수 조건 + 50개 매도 조건 생성
-  - 지표와 OHLCV 데이터를 활용한 조건 생성
-  - 사용되지 않는 지표 제거 기능
+#### 성능 최적화
+- **Multiprocessing**: 현재 평가 함수가 가벼워서 오버헤드가 큼
+- **CPU 사용량**: `configs/constants.py`의 `CPU_COUNT`로 제어
+- **메모리 관리**: 대용량 개체군 처리 시 메모리 사용량 모니터링
 
-#### 2. GP Layer (`gp/`)
-**핵심 역할**: DEAP 기반 유전 프로그래밍 설정 및 실행
+### 5. 로깅 및 시각화
+- **로깅**: `utils/file_handler.py`의 `setup_logging()` 사용
+- **시각화**: `utils/visualizer.py`에서 Plotly 기반 인터랙티브 그래프 생성
+- **출력**: `logs/YYYY-MM-DD/run_HH-MM-SS/` 디렉토리에 결과 저장
 
-- **toolbox.py**: GP 환경 설정
-  - `create_primitive_set()`: GP 함수와 터미널 정의
-    - Strategy 함수: [BuyType, SellType] → object
-    - 논리 연산자: and_, or_, not_ (매수/매도용)
-    - 터미널: buy_system1~50, sell_system1~50
-  - `create_toolbox()`: 진화 연산자 등록
-    - 개체 생성: expr_init, individual, population
-    - 진화 연산: evaluate, select, mate, mutate
+### 6. 테스트 및 검증
+- **전략 검증**: `strategy/validator.py`에서 JSON 전략 유효성 검사
+- **트리 파싱**: `strategy/parser.py`에서 GP 트리를 JSON으로 변환
+- **타입 안전성**: `domain/types.py`에서 강타입 시스템 사용
 
-- **operators.py**: 커스텀 유전 연산자
-  - `custom_crossover()`: 도메인 특화 교배 연산자
-    - 매수/매도 서브트리 분리 교배
-    - 타입 안전성 보장
-  - `custom_mutation()`: 도메인 특화 돌연변이 연산자
-    - 서브트리 내 타입별 돌연변이
+### 7. 주의사항
+- **Multiprocessing**: lambda 함수는 pickle 불가능하므로 전역 함수 사용
+- **메모리**: 대용량 개체군(1000+) 처리 시 메모리 사용량 주의
+- **성능**: 평가 함수가 가벼우면 multiprocessing 비활성화 고려
+- **시각화**: Plotly 그래프는 HTML로 저장되어 브라우저에서 확인
 
-- **evaluator.py**: 적합도 평가
-  - `eval_func()`: 개체 적합도 평가 함수
-    - 트리 구조 검증
-    - JSON 변환 및 검증
-    - Trader 모듈 연동 (TODO)
-  - `evaluate_with_trader()`: Trader 연동 평가
+### 8. 확장 계획
+- **Trader 연동**: `gp/evaluator.py`의 `evaluate_with_trader()` 함수 구현
+- **더 많은 지표**: `configs/indicator_configs.py`에 새로운 지표 추가
+- **실시간 모니터링**: 진화 과정 실시간 시각화
+- **백테스팅**: 생성된 전략의 성과 검증
 
-#### 3. Strategy Layer (`strategy/`)
-**핵심 역할**: GP 트리를 Trader가 사용할 수 있는 JSON으로 변환 및 검증
+### 9. 디버깅 팁
+- 로그 파일에서 진화 과정 추적
+- `visualizer.py`의 그래프로 수렴성 확인
+- `strategy/validator.py`로 생성된 전략 유효성 검사
+- CPU 사용량과 성능의 트레이드오프 고려
 
-- **parser.py**: GP 트리 파싱
-  - `parse_gp_tree_to_json()`: GP 트리 → JSON 변환
-  - `_analyze_tree_structure()`: 트리 구조 분석
-  - `_extract_buy/sell_condition_from_tree()`: 매수/매도 조건 추출
-  - `_convert_system_names_in_string()`: 시스템명 변환
-
-- **validator.py**: JSON 검증
-  - `validate_and_clean_strategy()`: 전략 JSON 검증 및 정리
-  - `_validate_and_clean_indicators()`: 지표 데이터 검증
-  - `_validate_and_clean_conditions()`: 조건 데이터 검증
-  - `_is_valid_indicator()`: 지표 유효성 검사
-  - `_is_valid_condition()`: 조건 유효성 검사
-
-- **formatter.py**: JSON 포맷팅
-  - `filter_used_systems()`: 사용되는 시스템만 필터링
-  - `update_system_numbers()`: 시스템 번호 재정렬 (1부터)
-  - `filter_used_indicators()`: 사용되는 지표만 필터링
-  - `update_indicator_names()`: 지표 이름 재정렬 (RSI1, RSI2, ...)
-
-#### 4. Utils Layer (`utils/`)
-**핵심 역할**: 공통 유틸리티 함수 제공
-
-- **file_handler.py**: 파일 I/O 및 시각화
-  - `setup_logging()`: 로깅 설정 및 출력 폴더 생성
-  - `save_json_strategy()`: JSON 전략 저장
-  - `visualize_tree()`: GP 트리 시각화 (PNG)
-
-- **helpers.py**: 공통 헬퍼 함수
-  - `extract_base_indicator_name()`: 지표 기본명 추출 (RSI1 → RSI)
-  - `extract_base_from_access_name()`: 접근명에서 기본명 추출 (MACD1[0] → MACD1)
-
-## 의존성 관계
-
+### 10. 커밋 메시지 규칙
 ```
-main.py
-  ↓
-config.py
-domain/ (types, indicator, condition)
-  ↓
-gp/ (toolbox, operators, evaluator)
-  ↓
-strategy/ (parser, validator, formatter)
-  ↓
-utils/ (file_handler, helpers)
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
 ```
 
-### 주요 의존성 규칙
-1. **domain** → config, utils.helpers
-2. **gp** → config, domain.types, gp.evaluator, gp.operators
-3. **strategy** → config, utils.helpers, strategy 내부 모듈
-4. **utils** → (의존성 없음, 독립적)
-
-## 진화 과정
-
-1. **초기화**: 
-   - ConditionManager로 조건 생성 (50 매수 + 50 매도)
-   - IndicatorGenerator로 지표 생성 (10개)
-   - 100개 개체군 생성 (GP 트리)
-
-2. **평가**: 
-   - eval_func()로 각 개체의 적합도 계산
-   - GP 트리 → JSON 변환 (parser)
-   - JSON 검증 및 정리 (validator)
-   - Trader 모듈 연동 평가 (TODO)
-
-3. **진화 루프** (20세대):
-   - 선택: 토너먼트 선택 (tournsize=3)
-   - 교배: 80% 확률로 custom_crossover
-   - 돌연변이: 15% 확률로 custom_mutation
-   - 재평가: 변한 개체들만 재평가
-
-4. **결과**: 
-   - 최적 개체를 JSON 및 시각화로 출력
-   - 사용되지 않는 지표/시스템 제거
-   - 번호 재정렬 (1부터 시작)
-
-## 설정 파라미터 (config.py)
-
-### 진화 파라미터
-- `N_POPULATION = 100`: 개체군 크기
-- `N_GENERATION = 20`: 세대 수
-- `CROSSOVER_PROBABILITY = 0.8`: 교배 확률
-- `MUTATION_PROBABILITY = 0.15`: 변이 확률
-
-### 트리 구조 파라미터
-- `INITIAL_MIN_DEPTH = 2`: 초기 최소 깊이
-- `INITIAL_MAX_DEPTH = 6`: 초기 최대 깊이
-- `MAX_MUTATION_DEPTH = 4`: 변이 최대 깊이
-- `MAX_TREE_SIZE = 100`: 최대 트리 크기
-
-### 도메인 파라미터
-- `INDICATORS_COUNT = 10`: 초기 지표 개수
-- `INITIAL_CONDITIONS_COUNT = 50`: 초기 조건 개수 (매수/매도 각각)
-- `INDICATORS`: RSI, SMA, MACD, ATR, BBANDS, OBV, STOCH
-- `INDICATOR_PARAMS`: 5, 10, 14, 20, 30, 50, 100, 150, 200
-- `CDL_TYPES`: 1, 3, 5, 15, 30, 60, 240, 1440
-- `SOURCES`: open, high, low, close, volume
-- `OPERATORS`: >, >=, ==, !=, <, <=
-
-## 코드 스타일 및 규칙
-
-### 네이밍 컨벤션
-- **클래스**: PascalCase (ConditionManager, IndicatorGenerator)
-- **함수**: snake_case (create_primitive_set, eval_func)
-- **상수**: UPPER_SNAKE_CASE (N_POPULATION, INDICATORS)
-- **변수**: snake_case (condition_manager, best_ind)
-- **Private 함수**: _snake_case (_validate_and_clean_indicators)
-
-### 타입 힌트
-- 모든 함수에 타입 힌트 사용 권장
-- 복잡한 타입은 typing 모듈 활용
-- DEAP 타입과 호환성 유지
-
-### 에러 처리
-- 로깅을 통한 상세한 에러 메시지
-- try-except로 파일 I/O 보호
-- 유효성 검사 (개체 구조, 트리 크기 등)
-
-### 모듈화 원칙
-- **단일 책임 원칙**: 각 모듈은 하나의 명확한 역할
-- **의존성 역전**: 상위 레벨이 하위 레벨에 의존
-- **인터페이스 분리**: DEAP 표준 인터페이스 사용
-
-## 개발 가이드라인
-
-### 새 기능 추가 시
-1. **도메인 로직**: `domain/` 디렉토리에 추가
-   - 새 타입: `domain/types.py`
-   - 새 지표 생성 로직: `domain/indicator.py`
-   - 새 조건 관리: `domain/condition.py`
-
-2. **GP 연산자**: `gp/` 디렉토리에 추가
-   - 새 유전 연산자: `gp/operators.py`
-   - 새 평가 함수: `gp/evaluator.py`
-
-3. **전략 처리**: `strategy/` 디렉토리에 추가
-   - 새 파싱 로직: `strategy/parser.py`
-   - 새 검증 규칙: `strategy/validator.py`
-   - 새 포맷팅 규칙: `strategy/formatter.py`
-
-4. **유틸리티**: `utils/` 디렉토리에 추가
-   - 파일 I/O: `utils/file_handler.py`
-   - 공통 함수: `utils/helpers.py`
-
-5. **설정**: `config.py`에 상수 추가
-
-### 디버깅 및 테스트
-- 로깅을 통한 실행 과정 추적
-- 시각화를 통한 GP 트리 구조 확인
-- JSON 출력을 통한 결과 검증
-- 각 모듈별 독립적 테스트 가능
-
-### 성능 최적화
-- 적합도 재계산 최소화 (fitness.valid 활용)
-- 커스텀 연산자로 도메인 특화 최적화
-- 메모리 효율적인 트리 구조
-- 사용되지 않는 지표/시스템 자동 제거
-
-## 주요 개념 설명
-
-### Primitive vs Terminal
-- **Primitive**: 함수 (Strategy, and_, or_, not_)
-- **Terminal**: 상수 (buy_system1, sell_system2, ...)
-- **PrimitiveSet**: 함수와 상수들의 집합
-
-### 타입 시스템
-- **BuyType**: 매수 관련 모든 타입 (개별 조건 + 복합 로직)
-- **SellType**: 매도 관련 모든 타입 (개별 조건 + 복합 로직)
-- **object**: 최종 전략 타입
-
-### 진화 연산자
-- **선택**: 토너먼트 선택으로 다양성 유지
-- **교배**: 매수/매도 로직 분리로 타입 안전성 보장
-- **돌연변이**: 서브트리 교체로 지역적 탐색
-
-### JSON 출력 구조
-```json
-{
-  "vars": {
-    "RSI1": { "func": "rsi", "params": [14], "cdl_type": 60, "sources": ["close"], "unary": true }
-  },
-  "buy_systems": {
-    "system1": { "alias": "system1", "left": "RSI1", "op": ">", "right": "close" }
-  },
-  "buy_system_op": "(system1 or system2)",
-  "sell_systems": { ... },
-  "sell_system_op": "..."
-}
-```
-
-## 리팩토링 원칙
-
-### 모듈 분리 원칙
-1. **도메인과 기술 분리**: 비즈니스 로직(`domain`)과 GP 기술(`gp`) 분리
-2. **파싱과 검증 분리**: 파싱(`parser`), 검증(`validator`), 포맷팅(`formatter`) 분리
-3. **유틸리티 독립성**: 유틸리티는 다른 모듈에 의존하지 않음
-
-### 파일 크기 관리
-- 한 파일당 200줄 이하 권장
-- 역할이 다른 함수는 별도 파일로 분리
-- 관련된 함수끼리 모듈로 그룹핑
-
-### 순환 의존성 방지
-- 상위 레이어가 하위 레이어에만 의존
-- 같은 레벨의 모듈 간 직접 의존 지양
-- 공통 함수는 `utils/helpers.py`로 분리
-
-## 대화 시 활용 가이드
-
-### 질문 유형별 대응
-1. **구조 질문**: 리팩토링된 모듈 구조 설명
-2. **기술 질문**: GP, DEAP, 타입 시스템, 리팩토링 원칙
-3. **개선 질문**: 성능, 확장성, 유지보수성 개선 방안
-4. **설명 질문**: 모듈별 역할, 의존성 관계, 데이터 흐름
-
-### 코드 예시 제공 시
-- 리팩토링된 구조 기반으로 설명
-- 모듈별 임포트 경로 명확히 표시
-- 타입 힌트와 주석 포함
-- 에러 처리 및 로깅 고려
-- DEAP 라이브러리 호환성 유지
-
-### 문제 해결 시
-- 로깅을 통한 디버깅 방법 제안
-- 시각화를 통한 구조 확인 방법
-- 설정 파라미터 조정 방안
-- 모듈별 독립 테스트 방법
-
-이 규칙을 따라 프로젝트의 일관성과 품질을 유지하며, 효율적인 개발과 유지보수를 지원합니다.
+**타입**: feat, fix, docs, style, refactor, test, chore
+**스코프**: gp, strategy, config, utils, domain
+**예시**: `feat(gp): add multiprocessing support for evaluation`
