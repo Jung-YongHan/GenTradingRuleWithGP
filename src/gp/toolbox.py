@@ -4,11 +4,19 @@ import operator
 
 from deap import base, creator, gp, tools
 
-from config import INITIAL_MAX_DEPTH, INITIAL_MIN_DEPTH
-from domain.types import BuyType, SellType, Strategy
+from src.configs.gp_configs import INITIAL_MAX_DEPTH, INITIAL_MIN_DEPTH
+from src.domain.types import BuyType, SellType, Strategy
 
 from .evaluator import eval_func
 from .operators import custom_crossover, custom_mutation
+
+# 전역 변수로 condition_manager 저장 (multiprocessing을 위해)
+_condition_manager = None
+
+
+def _evaluate_with_condition_manager(individual):
+    """condition_manager를 사용하여 개체를 평가하는 전역 함수"""
+    return eval_func(individual, _condition_manager)
 
 
 def create_primitive_set(condition_manager):
@@ -33,8 +41,11 @@ def create_primitive_set(condition_manager):
     return pset
 
 
-def create_toolbox(pset, condition_manager=None):
+def create_toolbox(pset, condition_manager=None, pool=None):
     """Toolbox를 생성하고 구성합니다."""
+    global _condition_manager
+    _condition_manager = condition_manager
+
     toolbox = base.Toolbox()
     toolbox.register(
         "expr_init",
@@ -49,14 +60,17 @@ def create_toolbox(pset, condition_manager=None):
     )
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-    # condition_manager를 전달할 수 있도록 lambda 함수로 래핑
+    # condition_manager를 전달할 수 있도록 전역 함수 사용
     if condition_manager is not None:
-        toolbox.register("evaluate", lambda ind: eval_func(ind, condition_manager))
+        toolbox.register("evaluate", _evaluate_with_condition_manager)
     else:
         toolbox.register("evaluate", eval_func)
 
     toolbox.register("select", tools.selTournament, tournsize=3)
     toolbox.register("mate", custom_crossover)
     toolbox.register("mutate", custom_mutation, pset=pset)
+
+    if pool is not None:
+        toolbox.register("map", pool.map)
 
     return toolbox

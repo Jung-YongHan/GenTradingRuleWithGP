@@ -2,9 +2,9 @@
 
 import random
 
-from config import MAX_TREE_SIZE
-from strategy.parser import parse_gp_tree_to_json
-from strategy.validator import validate_and_clean_strategy
+from src.configs.gp_configs import MAX_TREE_SIZE
+from src.strategy.parser import parse_gp_tree_to_json
+from src.strategy.validator import validate_and_clean_strategy
 
 
 def eval_func(individual, condition_manager=None):

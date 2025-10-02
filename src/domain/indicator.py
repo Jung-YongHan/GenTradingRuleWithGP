@@ -2,7 +2,7 @@
 
 import random
 
-from config import CDL_TYPES, INDICATOR_DEFINITIONS
+from src.configs.indicator_configs import CDL_TYPES, INDICATOR_DEFINITIONS
 
 
 class IndicatorGenerator:
@@ -72,7 +72,7 @@ class IndicatorGenerator:
 
     def generate_vars(self, n):
         """랜덤으로 vars 생성"""
-        from utils.helpers import extract_base_indicator_name
+        from src.utils.helpers import extract_base_indicator_name
 
         vars_dict = {}
         for _ in range(n):

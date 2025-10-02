@@ -4,7 +4,7 @@ import random
 
 from deap import gp
 
-from config import MAX_MUTATION_DEPTH
+from src.configs.gp_configs import MAX_MUTATION_DEPTH
 
 
 def custom_crossover(ind1, ind2):

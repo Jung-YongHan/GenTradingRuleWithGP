@@ -1,6 +1,6 @@
 # strategy/validator.py
 
-from config import OHLCV_SOURCES
+from src.configs.indicator_configs import OHLCV_SOURCES
 
 
 def validate_and_clean_strategy(strategy_json):

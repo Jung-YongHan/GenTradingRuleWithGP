@@ -4,15 +4,14 @@ import re
 
 from deap import gp
 
-from config import OHLCV_SOURCES
-from utils.helpers import extract_base_from_access_name
-
-from .formatter import (
+from src.configs.indicator_configs import OHLCV_SOURCES
+from src.strategy.formatter import (
     filter_used_indicators,
     filter_used_systems,
     update_indicator_names,
     update_system_numbers,
 )
+from src.utils.helpers import extract_base_from_access_name
 
 
 def parse_gp_tree_to_json(individual: gp.PrimitiveTree, condition_manager):

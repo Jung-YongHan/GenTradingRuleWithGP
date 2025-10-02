@@ -8,7 +8,7 @@ from datetime import datetime
 import pydot
 from deap import gp
 
-from config import LOG_DIR
+from src.configs.constants import LOG_DIR
 
 
 def setup_logging():
@@ -18,46 +18,55 @@ def setup_logging():
     run_dir_name = "run_" + now.strftime("%H-%M-%S")
     output_dir = os.path.join(date_dir, run_dir_name)
     os.makedirs(output_dir, exist_ok=True)
-    
+
     log_filepath = os.path.join(output_dir, "strategy.log")
-    
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
-            logging.FileHandler(log_filepath, encoding='utf-8'),
-            logging.StreamHandler()
+            logging.FileHandler(log_filepath, encoding="utf-8"),
+            logging.StreamHandler(),
         ],
-        force=True 
+        force=True,
     )
     logging.info(f"결과가 '{output_dir}' 폴더에 저장됩니다.")
     return output_dir
+
 
 def save_json_strategy(strategy_dict, output_dir):
     """최종 전략 딕셔너리를 JSON 파일로 저장"""
     filepath = os.path.join(output_dir, "strategy.json")
     try:
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(strategy_dict, f, indent=4, ensure_ascii=False)
         logging.info(f"💾 JSON 전략 저장 완료: '{filepath}'")
     except Exception as e:
         logging.error(f"❌ JSON 파일 저장 실패: {e}")
 
+
 def visualize_tree(individual, output_dir):
     """GP 트리를 지정된 폴더에 PNG 파일로 저장"""
     filepath = os.path.join(output_dir, "strategy_tree.png")
     nodes, edges, labels = gp.graph(individual)
-    graph = pydot.Dot(graph_type='graph', bgcolor="#f0f0f0") 
-    
-    for node_idx, node_label in labels.items():
-        fillcolor = "#ffffff" # 기본색
-        if node_label == 'Strategy': fillcolor = "#c5e3c5"
-        elif node_label.startswith("buy_system"): fillcolor = "#f2c5c5"
-        elif node_label.startswith("sell_system"): fillcolor = "#c5d5e3"
-        elif node_label in ['and_', 'or_', 'not_']: fillcolor = "#e3d1c5"
-        graph.add_node(pydot.Node(node_idx, label=node_label, style="filled", fillcolor=fillcolor))
+    graph = pydot.Dot(graph_type="graph", bgcolor="#f0f0f0")
 
-    for edge in edges: graph.add_edge(pydot.Edge(edge[0], edge[1]))
+    for node_idx, node_label in labels.items():
+        fillcolor = "#ffffff"  # 기본색
+        if node_label == "Strategy":
+            fillcolor = "#c5e3c5"
+        elif node_label.startswith("buy_system"):
+            fillcolor = "#f2c5c5"
+        elif node_label.startswith("sell_system"):
+            fillcolor = "#c5d5e3"
+        elif node_label in ["and_", "or_", "not_"]:
+            fillcolor = "#e3d1c5"
+        graph.add_node(
+            pydot.Node(node_idx, label=node_label, style="filled", fillcolor=fillcolor)
+        )
+
+    for edge in edges:
+        graph.add_edge(pydot.Edge(edge[0], edge[1]))
     try:
         graph.write_png(filepath)
         logging.info(f"📊 트리 시각화 완료: '{filepath}'")

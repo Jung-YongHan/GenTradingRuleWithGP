@@ -2,71 +2,84 @@
 
 import json
 import logging
+import multiprocessing
 import random
+import time
 
 from deap import base, creator, gp, tools
 
+from src.configs.constants import CPU_COUNT, RANDOM_SEED
+
 # --- 설정 및 모듈 임포트 ---
-import config
-from domain.condition import ConditionManager
-from gp.toolbox import create_primitive_set, create_toolbox
-from strategy.parser import parse_gp_tree_to_json
-from strategy.validator import validate_and_clean_strategy
-from utils.file_handler import save_json_strategy, setup_logging, visualize_tree
-from utils.visualizer import visualize_evolution, visualize_fitness_distribution
+from src.configs.gp_configs import (
+    CROSSOVER_PROBABILITY,
+    INDICATORS_COUNT,
+    INITIAL_CONDITIONS_COUNT,
+    MUTATION_PROBABILITY,
+    N_GENERATION,
+    N_POPULATION,
+)
+from src.domain.condition import ConditionManager
+from src.gp.toolbox import create_primitive_set, create_toolbox
+from src.strategy.parser import parse_gp_tree_to_json
+from src.strategy.validator import validate_and_clean_strategy
+from src.utils.file_handler import save_json_strategy, setup_logging, visualize_tree
+from src.utils.visualizer import visualize_evolution, visualize_fitness_distribution
 
 
-def main():
+def main(pool: multiprocessing.Pool):
     """메인 실행 함수"""
     # 환경 설정
     output_dir = setup_logging()
-    random.seed(config.RANDOM_SEED)
 
     # DEAP 기본 creator 설정
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax)
 
     # GP 환경 설정
-    condition_manager = ConditionManager(
-        config.INITIAL_CONDITIONS_COUNT, config.INDICATORS_COUNT
-    )
+    condition_manager = ConditionManager(INITIAL_CONDITIONS_COUNT, INDICATORS_COUNT)
     pset = create_primitive_set(condition_manager)
-    toolbox = create_toolbox(pset, condition_manager)
+    toolbox = create_toolbox(pset, condition_manager, pool)
 
     # (이하 코드는 이전과 동일)
     # 진화 시작
-    pop = toolbox.population(n=config.N_POPULATION)
+    pop = toolbox.population(n=N_POPULATION)
 
     logging.info("✨ 초기 개체군 생성 및 평가 시작...")
-    fitnesses = map(toolbox.evaluate, pop)
+    fitnesses = toolbox.map(toolbox.evaluate, pop)
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
 
     logging.info("=" * 60)
     logging.info(
         f"🚀 유전 프로그래밍 진화 시작! "
-        f"(세대: {config.N_GENERATION}, 개체수: {config.N_POPULATION})"
+        f"(세대: {N_GENERATION}, 개체수: {N_POPULATION})"
     )
     logging.info("=" * 60)
+
+    # 진화 시작 시간 기록
+    evolution_start_time = time.time()
 
     # 통계 수집을 위한 리스트
     stats_history = []
 
-    for g in range(config.N_GENERATION):
+    for g in range(N_GENERATION):
+        generation_start_time = time.time()
+
         offspring = toolbox.select(pop, len(pop))
         offspring = list(map(toolbox.clone, offspring))
 
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            if random.random() < config.CROSSOVER_PROBABILITY:
+            if random.random() < CROSSOVER_PROBABILITY:
                 toolbox.mate(child1, child2)
                 del child1.fitness.values, child2.fitness.values
         for mutant in offspring:
-            if random.random() < config.MUTATION_PROBABILITY:
+            if random.random() < MUTATION_PROBABILITY:
                 toolbox.mutate(mutant)
                 del mutant.fitness.values
 
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitnesses = map(toolbox.evaluate, invalid_ind)
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
@@ -79,6 +92,9 @@ def main():
         min_fit = min(fits)
         std_fit = (sum((x - avg_fit) ** 2 for x in fits) / len(fits)) ** 0.5
 
+        generation_end_time = time.time()
+        generation_duration = generation_end_time - generation_start_time
+
         stats_history.append(
             {
                 "generation": g + 1,
@@ -86,17 +102,26 @@ def main():
                 "avg": avg_fit,
                 "min": min_fit,
                 "std": std_fit,
+                "duration": generation_duration,
             }
         )
 
         logging.info(
             f"> 세대 {g+1:02d}: 최고={max_fit:.2f}, "
-            f"평균={avg_fit:.2f}, 최저={min_fit:.2f}"
+            f"평균={avg_fit:.2f}, 최저={min_fit:.2f} "
+            f"(소요시간: {generation_duration:.2f}초)"
         )
+
+    # 진화 종료 시간 기록 및 소요 시간 계산
+    evolution_end_time = time.time()
+    evolution_duration = evolution_end_time - evolution_start_time
 
     # 4. 최종 결과 처리
     logging.info("=" * 60)
     logging.info("🏆 최종 최적 전략 탐색 완료!")
+    logging.info(
+        f"⏱️  진화 소요 시간: {evolution_duration:.2f}초 ({evolution_duration/60:.2f}분)"
+    )
 
     best_ind = tools.selBest(pop, 1)[0]
     raw_json_strategy = parse_gp_tree_to_json(best_ind, condition_manager)
@@ -123,4 +148,13 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    random.seed(RANDOM_SEED)
+
+    # 시스템 전체 CPU 개수와 설정된 CPU 개수 출력
+    system_cpu_count = multiprocessing.cpu_count()
+    used_cpu_count = CPU_COUNT
+    print(f"시스템 CPU 개수: {system_cpu_count}")
+    print(f"사용할 CPU 개수: {used_cpu_count}")
+
+    with multiprocessing.Pool(used_cpu_count) as pool:
+        main(pool)

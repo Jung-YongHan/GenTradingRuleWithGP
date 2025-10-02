@@ -2,7 +2,11 @@
 
 import random
 
-from config import INDICATOR_DEFINITIONS, OHLCV_SOURCES, OPERATORS
+from src.configs.indicator_configs import (
+    INDICATOR_DEFINITIONS,
+    OHLCV_SOURCES,
+    OPERATORS,
+)
 
 from .indicator import IndicatorGenerator
 
@@ -71,7 +75,7 @@ class ConditionManager:
 
     def _get_indicator_access_name(self, indicator_name):
         """지표의 unary 속성에 따라 접근 이름을 반환"""
-        from utils.helpers import extract_base_indicator_name
+        from src.utils.helpers import extract_base_indicator_name
 
         # 고유 이름에서 원본 지표 이름 추출
         base_indicator_name = extract_base_indicator_name(indicator_name)
@@ -142,7 +146,7 @@ class ConditionManager:
 
     def _update_conditions_with_used_indicators(self, used_indicators):
         """사용된 지표들로 조건들을 업데이트"""
-        from utils.helpers import extract_base_from_access_name
+        from src.utils.helpers import extract_base_from_access_name
 
         # buy_pool 업데이트
         for condition_name, condition_data in self.buy_pool.items():

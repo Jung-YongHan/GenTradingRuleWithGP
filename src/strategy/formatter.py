@@ -2,8 +2,8 @@
 
 import re
 
-from config import OHLCV_SOURCES
-from utils.helpers import extract_base_from_access_name, extract_base_indicator_name
+from src.configs.indicator_configs import OHLCV_SOURCES
+from src.utils.helpers import extract_base_from_access_name, extract_base_indicator_name
 
 
 def filter_used_systems(systems_dict, system_op):
