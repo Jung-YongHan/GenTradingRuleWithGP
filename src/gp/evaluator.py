@@ -1,10 +1,41 @@
 # gp/evaluator.py
 
+import hashlib
+import json
 import random
 
 from src.configs.gp_configs import MAX_TREE_SIZE
 from src.strategy.parser import parse_gp_tree_to_json
 from src.strategy.validator import validate_and_clean_strategy
+
+# 전략 평가 결과를 저장하는 캐시
+_strategy_cache = {}
+
+
+def get_strategy_hash(strategy_json):
+    """전략 JSON을 해시값으로 변환하여 고유 키 생성"""
+    try:
+        # JSON을 정렬된 문자열로 변환하여 일관된 해시 생성
+        strategy_str = json.dumps(strategy_json, sort_keys=True, ensure_ascii=False)
+        return hashlib.sha256(strategy_str.encode()).hexdigest()
+    except Exception:
+        return None
+
+
+def get_cache_stats():
+    """캐시 통계 반환"""
+    return {
+        "total_cached": len(_strategy_cache),
+        "cache_size_bytes": sum(
+            len(str(k)) + len(str(v)) for k, v in _strategy_cache.items()
+        ),
+    }
+
+
+def clear_cache():
+    """캐시 초기화"""
+    global _strategy_cache
+    _strategy_cache.clear()
 
 
 def eval_func(individual, condition_manager=None):
@@ -26,8 +57,18 @@ def eval_func(individual, condition_manager=None):
     # 2. Trader로 전달하기 전에 JSON 검증 및 정리
     modified_json = validate_and_clean_strategy(strategy_json)
 
-    # 3. Trader 모듈로 전달하여 적합도 평가
+    # 3. 캐시 확인 - 이미 평가된 전략인지 확인
+    strategy_hash = get_strategy_hash(modified_json)
+    if strategy_hash is not None and strategy_hash in _strategy_cache:
+        # 캐시에서 결과 반환
+        return (_strategy_cache[strategy_hash],)
+
+    # 4. Trader 모듈로 전달하여 적합도 평가
     fitness_score = evaluate_with_trader(modified_json)
+
+    # 5. 평가 결과를 캐시에 저장
+    if strategy_hash is not None:
+        _strategy_cache[strategy_hash] = fitness_score
 
     return (fitness_score,)
 

@@ -20,6 +20,7 @@ from src.configs.gp_configs import (
     N_POPULATION,
 )
 from src.domain.condition import ConditionManager
+from src.gp.evaluator import clear_cache, get_cache_stats
 from src.gp.toolbox import create_primitive_set, create_toolbox
 from src.strategy.parser import parse_gp_tree_to_json
 from src.strategy.validator import validate_and_clean_strategy
@@ -31,6 +32,10 @@ def main(pool: multiprocessing.Pool):
     """메인 실행 함수"""
     # 환경 설정
     output_dir = setup_logging()
+
+    # 캐시 초기화
+    clear_cache()
+    logging.info("전략 평가 캐시 초기화 완료")
 
     # DEAP 기본 creator 설정
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -116,11 +121,19 @@ def main(pool: multiprocessing.Pool):
     evolution_end_time = time.time()
     evolution_duration = evolution_end_time - evolution_start_time
 
+    # 캐시 통계 출력
+    cache_stats = get_cache_stats()
+    logging.info("=" * 60)
+    logging.info("📦 전략 캐시 통계")
+    logging.info(f"   - 캐시된 고유 전략 수: {cache_stats['total_cached']}")
+    logging.info(f"   - 캐시 크기: {cache_stats['cache_size_bytes'] / 1024:.2f} KB")
+
     # 4. 최종 결과 처리
     logging.info("=" * 60)
     logging.info("🏆 최종 최적 전략 탐색 완료!")
     logging.info(
-        f"⏱️  진화 소요 시간: {evolution_duration:.2f}초 ({evolution_duration/60:.2f}분)"
+        f"⏱️  진화 소요 시간: {evolution_duration:.2f}초 "
+        f"({evolution_duration/60:.2f}분)"
     )
 
     best_ind = tools.selBest(pop, 1)[0]
