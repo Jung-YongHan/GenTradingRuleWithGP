@@ -1,0 +1,304 @@
+from mealpy import FloatVar, IntegerVar, StringVar, PermutationVar, MixedSetVar, BinaryVar, MixedSetVar
+
+from bt4.core.ga_optim import GAOptimizer, GAProblem
+
+from bt4.Constants import R
+import numpy as np
+from bt4.Constants import CandleType, AssetMgrType
+from bt4.utils.misc_utils import calibrate_simul_env2
+from bt4.utils.python_utils import now_dt, dt2str_for_filename
+from bt4.utils.python_utils import flatten
+import bt4.GlobalProperties as global_prop
+
+def decode_markets(mkt_comb, markets):
+    mkt_indices = np.where(mkt_comb == 1)[0]
+    tgt_mkts  = [markets[i] for i in mkt_indices]
+    return tgt_mkts
+
+def build_tai_params(var, params, encoded_pblm):
+    print(f"{var=},{params=},{encoded_pblm=}")
+    param_list = []
+    for idx in range(len(params)):
+        var_name = f"{var}_params_{idx}"
+        param_list.append(encoded_pblm[var_name])
+    return param_list
+
+def build_weighted_params(top_n_len,encoded_pblm):
+    print(f"{encoded_pblm=}")
+    param_list = []
+    for idx in range(top_n_len):
+        var_name = f"weighted_{idx}"
+        param_list.append(encoded_pblm[var_name])
+    return param_list
+
+def decode_timeframes(tf_comb, timeframes):
+    tf_indices = np.where(tf_comb == 1)[0]
+    tgt_tfs  = [timeframes[i] for i in tf_indices]
+    return tgt_tfs
+
+class GAStrategyOptimizer(GAOptimizer):
+
+    def __init__(self, tid, stgy_name, cfg_module, ga_hist_output):
+        self.tid = tid
+        self.stgy_name = stgy_name
+        self.cfg_module = cfg_module
+        self.ga_hist_output = ga_hist_output
+        self.ga_markets = None
+
+    def create_problem(self):
+        {% if (ga_markets is defined) and (ga_markets == True) %}
+        self.ga_markets = {{ markets }}
+        {% endif %}
+
+        my_bounds = [
+        {% if (ga_markets is defined) and (ga_markets == True) %}
+            BinaryVar(n_vars=len({{ markets }}), name = "markets"),
+        {% endif %}
+        {% if vola.support == True %}
+            {%  if vola.ga_vol_tgt is defined %}
+            MixedSetVar(valid_sets = tuple({{ vola.ga_vol_tgt }}), name = "vol_tgt"),
+            {% endif %}
+        {% endif %}
+
+        {% if timeframe.support == True and timeframe.ga_timeframes == True %}
+            BinaryVar(n_vars=len({{ timeframe.timeframes }}), name = "timeframes"),
+            {% if timeframe.ga_timegap is defined %}
+            IntegerVar(lb = {{ timeframe.ga_timegap[0] }}, ub = {{ timeframe.ga_timegap[1] }}, name = "timegap"),
+            {% endif %}
+        {% endif %}
+
+        {% if fixed.support == True %}
+            FloatVar(lb = {{ fixed.ga_trade_ratio }}[0], ub = {{ fixed.ga_trade_ratio }}[1], name = "fixed_t_ratio"),
+        {% endif %}
+        {% if weighted.support == True %}
+            {% for ga_top in weighted.ga_top_n %}
+            FloatVar(lb = {{ ga_top }}[0], ub = {{ ga_top }}[1], name = "weighted_"+str({{ loop.index }}-1)),
+            {% endfor %}
+        {% endif %}
+        {% if stop_loss.support == True %}
+            {% if stop_loss.ga_ratio is defined %}
+            FloatVar(lb = {{ stop_loss.ga_ratio }}[0], ub = {{ stop_loss.ga_ratio }}[1], name = "stop_loss_ratio"),
+            {% endif %}
+        {% endif %}
+        {% if trailing_stop.support == True %}
+            {% if trailing_stop.ga_ratio is defined %}
+            FloatVar(lb = {{ trailing_stop.ga_ratio }}[0], ub = {{ trailing_stop.ga_ratio }}[1], name = "trailing_stop_ratio"),
+            {% endif %}
+        {% endif %}
+        {% if take_profit.support == True %}
+            {% if take_profit.ga_ratio is defined %}
+            FloatVar(lb = {{ take_profit.ga_ratio }}[0], ub = {{ take_profit.ga_ratio }}[1], name = "take_profit_ratio"),
+            {% endif %}
+        {% endif %}
+        {% for var in vars -%}
+            {% if var.startswith("ga") and var.endswith("time") %}
+            StringVar(valid_sets = {{ vars[var] }}, name = "{{ var.replace("ga_", "") }}"),
+            {% else %}
+                {% if vars[var] is mapping %}
+                    {% for tai_var in vars[var] %}
+                        {% if tai_var == "ga_params" %}
+                            {% for ga_params in vars[var][tai_var] %}
+                                {% if ga_params[2] == "Integer" %}
+            IntegerVar(lb = {{ ga_params[0] }}, ub = {{ ga_params[1] }}, name = "{{ var + "_"+ tai_var.replace("ga_", "") + "_" +str(loop.index-1) }}"),
+                                {% elif ga_params[2] == "Float" %}
+            FloatVar(lb = {{ ga_params[0] }}, ub = {{ ga_params[1] }}, name = "{{ var + "_"+ tai_var.replace("ga_", "") + "_" +str(loop.index-1) }}"),
+                                {% endif %}
+                            {% endfor %}
+                        {% elif tai_var.startswith("ga_sources") %}
+            StringVar(valid_sets = ({{ vars[var][tai_var] }}), name = "{{ var + "_"+ tai_var.replace("ga_", "") }}"),
+                        {% elif tai_var.startswith("ga_cdl_types") %}
+            MixedSetVar(valid_sets = tuple({{ vars[var][tai_var] }}), name = "{{ var + "_"+ tai_var.replace("ga_", "") }}"),
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+
+        {% if pt_exec is defined and pt_exec == True %} {#### for Pair Trading ####}
+            {% if buy_sell_systems_pt_ga is defined %}  {#### buy_sell_systems_pt_ga for Pair Trading ####}
+            StringVar(valid_sets = ({{ buy_sell_systems_pt_ga.ga_pt_left_markets }}), name = "buy_sell_left_market"),
+            StringVar(valid_sets = ({{ buy_sell_systems_pt_ga.ga_pt_right_markets }}), name = "buy_sell_right_market"),
+            StringVar(valid_sets = ({{ buy_sell_systems_pt_ga.ga_pt_tgt_markets }}), name = "buy_sell_tgt_market"),
+            {% else %}          {#### buy_sell_systems_pt_ga disabled for Pair Trading ####}
+            {% for bsys in buy_systems -%}
+                {% if buy_systems[bsys].left != "time" %}
+                {% if buy_systems[bsys].ga_pt_left_markets is defined and len(buy_systems[bsys].ga_pt_left_markets) > 0 %}
+            StringVar(valid_sets = ({{ buy_systems[bsys].ga_pt_left_markets }}), name = "buy_{{ bsys }}_left_market"),
+                {% endif %}
+                {% if buy_systems[bsys].ga_pt_right_markets is defined and len(buy_systems[bsys].ga_pt_right_markets) > 0 %}
+            StringVar(valid_sets = ({{ buy_systems[bsys].ga_pt_right_markets }}), name = "buy_{{ bsys }}_right_market"),
+                {% endif %}
+                {% if buy_systems[bsys].ga_pt_tgt_markets is defined and len(buy_systems[bsys].ga_pt_tgt_markets) > 0 %}
+            StringVar(valid_sets = ({{ buy_systems[bsys].ga_pt_tgt_markets }}), name = "buy_{{ bsys }}_tgt_market"),
+                {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% for ssys in sell_systems -%}
+                {% if sell_systems[ssys].left != "time" %}
+                {% if sell_systems[ssys].ga_pt_left_markets is defined and len(sell_systems[ssys].ga_pt_left_markets) > 0 %}
+            StringVar(valid_sets = ({{ sell_systems[ssys].ga_pt_left_markets }}), name = "sell_{{ ssys }}_left_market"),
+                {% endif %}
+                {% if sell_systems[ssys].ga_pt_right_markets is defined and len(sell_systems[ssys].ga_pt_right_markets) > 0 %}
+            StringVar(valid_sets = ({{ sell_systems[ssys].ga_pt_right_markets }}), name = "sell_{{ ssys }}_right_market"),
+                {% endif %}
+                {% if sell_systems[ssys].ga_pt_tgt_markets is defined and len(sell_systems[ssys].ga_pt_tgt_markets) > 0 %}
+            StringVar(valid_sets = ({{ sell_systems[ssys].ga_pt_tgt_markets }}), name = "sell_{{ ssys }}_tgt_market"),
+                {% endif %}
+                {% endif %}
+            {% endfor %}
+            {% endif %}
+        {% endif %}
+        ]
+
+        problem_dic = {
+        {%  if ga_exec_obj is defined %}
+            {% if ga_exec_obj == "PROFIT" %}
+            "obj_weights"     : [0.8, 0.2],
+            {% elif ga_exec_obj == "BALANCED" %}
+            "obj_weights"     : [0.5, 0.5],
+            {% else %}
+            "obj_weights"     : [0.5, 0.5],
+            {% endif %}
+        {% else %}
+            "obj_weights"     : [0.5, 0.5],
+        {% endif %}
+            "save_population" : True,
+            "name"            : self.stgy_name,
+            "log_to"          : "file",
+            "log_file"        : f"ga_{self.stgy_name}_{dt2str_for_filename(now_dt())}.log",
+            # Default value = "mealpy.log"
+        }
+
+        problem = GAProblem(self, self.tid, self.stgy_name, self.cfg_module,
+                            self.ga_hist_output, self.ga_markets, my_bounds, "max",
+                            **problem_dic)
+        return problem
+
+
+    def get_term_dict(self) :
+        term_dict = {
+        {% if ga_exec_mode == "BASIC" %}
+            "max_fe": global_prop.BASIC_MODE_EXEC_NUM,
+        {% elif ga_exec_mode == "ADVANCED" %}
+            "max_fe": global_prop.ADV_MODE_EXEC_NUM,
+        {% elif ga_exec_mode == "BEST_EFFORT" %}
+            "max_early_stop": global_prop.MAX_MODE_EARLY_STOP_EPOCH,
+        {% else %}
+            "max_fe": global_prop.BASIC_MODE_EXEC_NUM,
+        {% endif %}
+            }
+        return term_dict
+
+
+    def setup_cfg_with_encoded_problem(self, r, encoded_pblm, stgy_cfg_param):
+        stgy_cfg_param[r.STGY.NAME] = "dummy"
+        {% if ga_markets == True %}
+        stgy_cfg_param[r.OP.MARKET] = tuple(decode_markets(encoded_pblm["markets"], self.ga_markets),)
+        {% endif %}
+        {% if vola.support == True %}
+        stgy_cfg_param[r.AM.AM_TYPE] = AssetMgrType.VOLATILITY
+            {%  if vola.ga_vol_tgt is defined %}
+        stgy_cfg_param[r.AM.AM_VOL_TARGET] = encoded_pblm['vol_tgt']
+            {% endif %}
+        {% endif %}
+
+        {% if timeframe.support == True%}
+            {% if timeframe.ga_timeframes == True %}
+        stgy_cfg_param[r.AM.AM_TIMEFRAMES] = decode_timeframes(encoded_pblm['timeframes'], {{ timeframe.timeframes }})
+        stgy_cfg_param[r.STGY.PARAMS]["timeframes"] = stgy_cfg_param[r.AM.AM_TIMEFRAMES]
+            {% endif %}
+            {% if timeframe.ga_timegap is defined %}
+        stgy_cfg_param[r.STGY.PARAMS]["timegap"] = encoded_pblm['timegap']
+            {% endif %}
+        {% endif %}
+        {% if fixed.support == True %}
+        stgy_cfg_param[r.AM.AM_FIXED_TRADE_RATIO] = encoded_pblm['fixed_t_ratio']
+        {% endif %}
+        {% if weighted.support == True %}
+        stgy_cfg_param[r.AM.AM_WGHT_TOP_N] = build_weighted_params({{len(weighted.top_n)}}, encoded_pblm)
+        {% endif %}
+        {% if stop_loss.support == True %}
+            {% if stop_loss.ga_ratio is defined %}
+        stgy_cfg_param[r.STGY.STOP_LOSS] = [encoded_pblm["stop_loss_ratio"]]
+            {% endif %}
+        {% endif %}
+        {% if trailing_stop.support == True %}
+            {% if trailing_stop.ga_ratio is defined %}
+        stgy_cfg_param[r.STGY.TRAILING_STOP] = [encoded_pblm["trailing_stop_ratio"]]
+            {% endif %}
+        {% endif %}
+        {% if take_profit.support == True %}
+            {% if take_profit.ga_ratio is defined %}
+        stgy_cfg_param[r.STGY.TAKE_PROFIT] = [encoded_pblm["take_profit_ratio"]]
+            {% endif %}
+        {% endif %}
+
+        {% for var in vars -%}
+            {% if var.startswith("ga") and var.endswith("time") %}
+        stgy_cfg_param[r.STGY.PARAMS]["{{ var.replace("ga_", "") }}"] = encoded_pblm["{{ var.replace("ga_", "") }}"]
+            {% else %}
+                {% if vars[var] is mapping %}
+                    {% for tai_var in vars[var] %}
+                        {% if tai_var == "ga_params" %}
+        stgy_cfg_param[r.STGY.PARAMS]["{{ var }}"][1] = build_tai_params("{{var}}", {{ vars[var].params }}, encoded_pblm)
+                        {% elif tai_var == "ga_sources" %}
+        stgy_cfg_param[r.STGY.PARAMS]["{{ var }}"][3] = [encoded_pblm["{{ var }}_sources"]]
+                        {% elif tai_var.startswith("ga_cdl_types") %}
+        stgy_cfg_param[r.STGY.PARAMS]["{{ var }}"][2] = CandleType(encoded_pblm["{{ var }}_cdl_types"])
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+
+        {% if pt_exec is defined and pt_exec == True %} {#### for Pair Trading ####}
+            {% if buy_sell_systems_pt_ga is defined %}  {#### buy_sell_systems_pt_ga for Pair Trading ####}
+            {% for bsys in buy_systems -%}
+                {% if buy_systems[bsys].left != "time" %}
+        stgy_cfg_param[r.STGY.PARAMS]["buy_{{ bsys }}_left_market"] = encoded_pblm["buy_sell_left_market"]
+        stgy_cfg_param[r.STGY.PARAMS]["buy_{{ bsys }}_right_market"] = encoded_pblm["buy_sell_right_market"]
+        stgy_cfg_param[r.STGY.PARAMS]["buy_{{ bsys }}_tgt_market"] = encoded_pblm["buy_sell_tgt_market"]
+                {% endif %}
+            {% endfor %}
+
+            {% for ssys in sell_systems -%}
+                {% if sell_systems[ssys].left != "time" %}
+        stgy_cfg_param[r.STGY.PARAMS]["sell_{{ ssys }}_left_market"] = encoded_pblm["buy_sell_left_market"]
+        stgy_cfg_param[r.STGY.PARAMS]["sell_{{ ssys }}_right_market"] = encoded_pblm["buy_sell_right_market"]
+        stgy_cfg_param[r.STGY.PARAMS]["sell_{{ ssys }}_tgt_market"] = encoded_pblm["buy_sell_tgt_market"]
+                {% endif %}
+            {% endfor %}
+
+            {% else %}          {#### buy_sell_systems_pt_ga disabled for Pair Trading ####}
+            {% for bsys in buy_systems -%}
+                {% if buy_systems[bsys].left != "time" %}
+                {% if buy_systems[bsys].ga_pt_left_markets is defined and len(buy_systems[bsys].ga_pt_left_markets) > 0 %}
+        stgy_cfg_param[r.STGY.PARAMS]["buy_{{ bsys }}_left_market"] = encoded_pblm["buy_{{ bsys }}_left_market"]
+                {% endif %}
+                {% if buy_systems[bsys].ga_pt_right_markets is defined and len(buy_systems[bsys].ga_pt_right_markets) > 0 %}
+        stgy_cfg_param[r.STGY.PARAMS]["buy_{{ bsys }}_right_market"] = encoded_pblm["buy_{{ bsys }}_right_market"]
+                {% endif %}
+                {% if buy_systems[bsys].ga_pt_tgt_markets is defined and len(buy_systems[bsys].ga_pt_tgt_markets) > 0 %}
+        stgy_cfg_param[r.STGY.PARAMS]["buy_{{ bsys }}_tgt_market"] = encoded_pblm["buy_{{ bsys }}_tgt_market"]
+                {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% for ssys in sell_systems -%}
+                {% if sell_systems[ssys].left != "time" %}
+                {% if sell_systems[ssys].ga_pt_left_markets is defined and len(sell_systems[ssys].ga_pt_left_markets) > 0 %}
+        stgy_cfg_param[r.STGY.PARAMS]["sell_{{ ssys }}_left_market"] = encoded_pblm["sell_{{ ssys }}_left_market"]
+                {% endif %}
+                {% if sell_systems[ssys].ga_pt_right_markets is defined and len(sell_systems[ssys].ga_pt_right_markets) > 0 %}
+        stgy_cfg_param[r.STGY.PARAMS]["sell_{{ ssys }}_right_market"] = encoded_pblm["sell_{{ ssys }}_right_market"]
+                {% endif %}
+                {% if sell_systems[ssys].ga_pt_tgt_markets is defined and len(sell_systems[ssys].ga_pt_tgt_markets) > 0 %}
+        stgy_cfg_param[r.STGY.PARAMS]["sell_{{ ssys }}_tgt_market"] = encoded_pblm["sell_{{ ssys }}_tgt_market"]
+                {% endif %}
+                {% endif %}
+            {% endfor %}
+            {% endif %}
+        {% endif %}
+
+        return stgy_cfg_param

@@ -1,0 +1,30 @@
+{
+  "$id": "https://example.com/schemas/systems_schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "definitions": {
+    "systems": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "properties": {
+            "alias": {
+              "type": "string"
+            },
+            "left": {
+              "type": "string"
+            },
+            "op": {
+              "type": "string"
+            },
+            "right": {
+              "type": "string"
+            }
+          },
+          "required": ["alias", "left", "op", "right"]
+        }
+      }
+    }
+  }
+}

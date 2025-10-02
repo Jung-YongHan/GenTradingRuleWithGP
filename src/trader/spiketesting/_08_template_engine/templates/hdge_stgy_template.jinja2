@@ -1,0 +1,79 @@
+from bulltrader_strategy.Strategy import AbstractHedgingStrategy
+
+
+from bt3.Constants import ExType, CandleType, QItem
+from bt3.quote.TAIMgr import TAIMgr
+from bt3.utils.market_utils import pick_market_unary_tais, pick_market_nary_tais, match_time_frame, \
+    compute_sell_timeframes, compute_vol5, compute_bb_rsi14
+from bt3.utils.misc_utils import rearrange_market_tais
+from bt3.utils.mylog import init_log
+from bt3.utils.python_utils import split_hour_min, is_the_time, dt2str, to_krw_str, to_curr_unit_str2
+from bt3.utils.tai_utils import get_unary_tai, get_nary_tai
+from bulltrader_strategy.Strategy import AbstractStrategy, AbstractNettingStrategy, AbstractHedgingStrategy
+
+
+
+class {{ stgy_name }}(AbstractHedgingStrategy):
+    def __init__(self, ):
+        super({{ stgy_name }}, self).__init__()
+
+    def load_tai_params(self, params):
+        {# self.ma1 = params['ma1'] #}
+        {% for var in vars -%}self.{{ var }} = params["{{ var }}"]
+        {% endfor %}
+
+    def __isBuySignal__(self, mkt_buy_tais, tmgr, market, price, time_dt, tf_hour):
+        desc = ""
+        {# ma1 = mkt_buy_tais[market]['ma1'] #}
+        {% for var in vars -%}{{ var }} = mkt_buy_tais[market]["{{ var }}"]
+        {% endfor %}
+
+        {#  system1 = price > ma1 #}
+        {% for bsys in buy_systems -%}{{ bsys }} = {{ buy_systems[bsys].left }} {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }}
+        {% endfor %}
+
+        {# desc = desc + f"\r\n *[ma1] = {system1} :: price({price}) > ma1({ma1})" #}
+        {% for bsys in buy_systems -%}desc = desc + f"\r\n *[{{ buy_systems[bsys].alias }}] = { {{ bsys }} } :: {{ buy_systems[bsys].left }}({ {{ buy_systems[bsys].left }} }) > {{ buy_systems[bsys].right }}({ {{ buy_systems[bsys].right }} })"
+        {% endfor %}
+
+        signal = False
+        {# system1 and system2 and system3 and system4 #}
+        if {{ buy_system_op }} :
+            signal = True
+
+        return signal, desc
+
+    def __isSellSignal__(self, mkt_sell_tais, tmgr, market, price, time_dt, tf_hour) :
+        desc = ""
+        {# ma1 = mkt_sell_tais[market]['ma1'] #}
+        {% for var in vars -%}{{ var }} = mkt_sell_tais[market]["{{ var }}"]
+        {% endfor %}
+        {# system1 = price < ma1 #}
+        {% for ssys in sell_systems -%}{{ ssys }} = {{ sell_systems[ssys].left }} {{ sell_systems[ssys].op }} {{ sell_systems[ssys].right }}
+        {% endfor %}
+
+        {# desc = desc + f"\r\n *[ma1] = {system1} :: price({price}) < ma1({ma1})" #}
+        {% for ssys in sell_systems -%}desc = desc + f"\r\n *[{{ sell_systems[ssys].alias }}] = { {{ ssys }} } :: {{ sell_systems[ssys].left }}({ {{ sell_systems[ssys].left }} }) > {{ sell_systems[ssys].right }}({ {{ sell_systems[ssys].right }} })"
+        {% endfor %}
+
+        signal = False
+        {# system1 or system2 or system3 or system4 #}
+        if {{ sell_system_op }} :
+            signal = True
+
+        return signal, desc
+
+    def extract_tai(self, tmgr, timeframe_hour):
+        quote = tmgr.get_quote()
+        markets = quote.get_markets(self.ex_type)
+
+        ma_key = f'DAYS_{timeframe_hour}'
+        {# self.ma1[2] = CandleType[ma_key] #}
+        {% for var in vars -%}self.{{ var }}[2] = CandleType[ma_key]
+        {% endfor %}
+
+        market_tai = {}
+        {# rearrange_market_tais(markets, market_tai, "ma1", get_unary_tai(tmgr, self.ma1)) #}
+        {% for var in vars -%}rearrange_market_tais(markets, market_tai, "{{ var }}", {% if vars[var].unary == True %} get_unary_tai(tmgr, self.{{ var }}) {% else %} get_nary_tai(tmgr, self.self.{{ var }}) {% endif %})
+        {% endfor %}
+        return market_tai

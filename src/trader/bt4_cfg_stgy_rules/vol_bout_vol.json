@@ -1,0 +1,55 @@
+{
+  "stgy_name": "VolatilityBreakoutStrategy",
+  "module_name": "VolatilityBreakoutStrategy",
+  "bt_start": "2018-10-01T08:59:00",
+  "bt_end": "2022-11-25T08:59:00",
+  "markets": ["KRW-BTC", "KRW-ETH", "KRW-XRP"],
+  "cdl_type": 60,
+  "init_balance": 10000000,
+  "slippage" : 0.005,
+  "bt_times" : [],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.04
+  },
+  "timeframe":{
+    "support": false,
+    "timeframes": ["07:59", "08:59"],
+    "timegap": 1
+  },
+  "fixed": {
+    "support": false,
+    "hdge": false,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": false,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.02
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "reserved_vars" : ["open_d1"],
+  "vars": {
+    "base_time" : "08:59",
+    "sell_time" : "07:59",
+    "range": {"func": "range", "params": [1], "cdl_type": 1440, "sources": ["high","low"], "unary": true}
+  },
+  "buy_systems": {
+    "system1": {"alias": "k", "left": "close", "op": ">", "right": "open_d1 + range * 0.5"}
+  },
+  "buy_system_op": "system1",
+  "sell_systems": {
+    "system1": {"alias": "time", "left": "time", "op": "==", "right": "sell_time"}
+  },
+  "sell_system_op": "system1"
+}

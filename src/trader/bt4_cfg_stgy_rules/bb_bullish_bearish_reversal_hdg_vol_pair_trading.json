@@ -1,0 +1,55 @@
+{
+  "stgy_name": "WinningSession_Day",
+  "module_name": "WinningSessionStrategy",
+  "pt_exec" : true,
+  "bt_start": "2020-01-01T08:59:00",
+  "bt_end": "2022-03-31T08:59:00",
+  "markets": ["KRW-BTC", "KRW-ETH"],
+  "cdl_type": 60,
+  "init_balance": 5000000,
+  "slippage" : 0.0005,
+  "bt_times" : ["08:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.04
+  },
+  "timeframe":{
+    "support": true,
+    "timeframes": ["08:59", "17:59"],
+    "timegap": 1
+  },
+  "fixed": {
+    "support": false,
+    "hdge": false,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": true,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.10
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "vars": {
+    "bbands": {"func": "bbands", "params": [25, 2.0, 2.0, 0], "cdl_type": 1474, "sources": ["close"], "unary": false},
+    "bullish_rev":{"func": "bullish_reversal", "params": [15], "cdl_type": 1474,"sources": ["bbands[2]"], "unary": true},
+    "bearish_rev":{"func": "bearish_reversal", "params": [15], "cdl_type": 1474,"sources": ["bbands[0]"], "unary": true}
+  },
+  "buy_systems": {
+    "system1": {"alias": "bullish_rev", "left": "bullish_rev",  "pt_left_market" : "KRW-BTC", "op": "==", "right": "True","pt_right_market" :  "KRW-BTC", "pt_tgt_market" :  "KRW-ETH"}
+  },
+  "buy_system_op": "system1",
+  "sell_systems": {
+    "system1": {"alias": "bearish_rev", "left": "bearish_rev", "pt_left_market" : "KRW-BTC", "op": "==", "right": "True", "pt_right_market" :  "KRW-BTC", "pt_tgt_market" :  "KRW-ETH"}
+  },
+  "sell_system_op": "system1"
+}

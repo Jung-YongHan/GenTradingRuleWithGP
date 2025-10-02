@@ -1,0 +1,12 @@
+1. download and install windows open ssl
+     https://slproweb.com/products/Win32OpenSSL.html
+
+2. create "openssl.cnf" file and place it into "c:\Program Files\OpenSSL-Win64\bin\openssl.cnf"
+
+3. edit system enviornment like below:
+     OPENSSL_CONF=c:\Program Files\OpenSSL-Win64\bin\openssl.cnf
+
+4. open cmd windows and write the follows and enter your address according to the directions.
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned.key -out selfsigned.crt
+
+

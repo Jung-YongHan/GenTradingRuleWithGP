@@ -1,0 +1,63 @@
+{
+  "stgy_name": "SuperWinningSessionPoweredByMACrossOver_Hdge",
+  "module_name": "SuperWinningSessionStrategy",
+  "bt_start": "2019-01-01T08:59:00",
+  "bt_end": "2025-01-14T08:59:00",
+  "markets": ["USDT-BTC", "USDT-ETH", "USDT-XRP"],
+  "cdl_type": 60,
+  "init_balance": 10000000,
+  "slippage" : 0.005,
+  "bt_times" : ["08:59", "12:59", "16:59", "20:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.04
+  },
+  "timeframe":{
+    "support": true,
+    "timeframes": ["08:59", "12:59", "16:59", "20:59"],
+    "timegap": 1
+  },
+  "fixed": {
+    "support": false,
+    "hdge": true,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": false,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.02
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "vars": {
+    "ma1": {"func": "sma", "params": [3], "cdl_type": 1474, "sources": ["close"], "unary": true},
+    "ma2": {"func": "sma", "params": [5], "cdl_type": 1474, "sources": ["close"], "unary": true},
+    "ma3": {"func": "sma", "params": [10], "cdl_type": 1474, "sources": ["close"], "unary": true},
+    "ma4": {"func": "sma", "params": [20], "cdl_type": 1474, "sources": ["close"], "unary": true
+    }},
+  "buy_systems": {
+    "system1": {"alias": "ma1", "left": "close", "op": ">", "right": "ma1"},
+    "system2": {"alias": "ma2", "left": "close", "op": ">", "right": "ma2"},
+    "system3": {"alias": "ma3", "left": "close", "op": ">", "right": "ma3"},
+    "system4": {"alias": "ma4", "left": "close", "op": ">", "right": "ma4"},
+    "system5": {"alias": "crossover", "left": "ma2", "op": ">", "right": "ma4"}
+  },
+  "buy_system_op": "system1 and system2 and system3 and system4 and system5",
+  "sell_systems": {
+    "system1": {"alias": "ma1", "left": "close", "op": "<", "right": "ma1"},
+    "system2": {"alias": "ma2", "left": "close", "op": "<", "right": "ma2"},
+    "system3": {"alias": "ma3", "left": "close", "op": "<", "right": "ma3"},
+    "system4": {"alias": "ma4", "left": "close", "op": "<", "right": "ma4"},
+    "system5": {"alias": "crossover", "left": "ma2", "op": "<", "right": "ma4"}
+  },
+  "sell_system_op": "system1 or system2 or system3 or system4 or system5"
+}

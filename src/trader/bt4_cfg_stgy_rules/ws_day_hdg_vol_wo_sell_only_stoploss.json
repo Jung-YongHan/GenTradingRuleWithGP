@@ -1,0 +1,48 @@
+{
+  "stgy_name": "WinningSession_Hedge",
+  "module_name": "WinningSessionStrategy",
+  "bt_start": "2020-01-01T08:59:00",
+  "bt_end": "2022-03-31T08:59:00",
+  "markets": ["KRW-BTC", "KRW-ETH", "KRW-XRP"],
+  "cdl_type": 60,
+  "init_balance": 10000000,
+  "slippage" : 0.0008,
+  "bt_times" : ["08:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.04
+  },
+  "timeframe":{
+    "support": true,
+    "timeframes": ["08:59"],
+    "timegap": 0
+  },
+  "fixed": {
+    "support": false,
+    "hdge": true,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": true,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.02
+  },
+  "take_profit": {
+    "support": true,
+    "ratio": 0.5
+  },
+  "vars": {
+    "ma1": {"func": "sma", "params": [5], "cdl_type": 1474, "sources": ["close"], "unary": true}
+  },
+  "buy_systems": {
+    "system1": {"alias": "ma1", "left": "close", "op": ">", "right": "ma1"}
+  },
+  "buy_system_op": "system1"
+}

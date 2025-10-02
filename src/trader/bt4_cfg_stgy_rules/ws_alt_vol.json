@@ -1,0 +1,73 @@
+{
+  "stgy_name": "WinningSessionAltStrategy",
+  "module_name": "WinningSessionStrategy",
+  "bt_start": "2022-03-18T14:59:00",
+  "bt_end": "2023-04-22T08:59:00",
+  "markets": ["KRW-BTC","KRW-ETH","KRW-XRP"],
+  "cdl_type": 1,
+  "init_balance": 10000000,
+  "slippage" : 0.005,
+  "bt_times" : [],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.04
+  },
+  "timeframe":{
+    "support": false,
+    "timeframes": ["08:59", "17:59"],
+    "timegap": 1
+  },
+  "fixed": {
+    "support": false,
+    "hdge": false,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": false,
+    "ratio": -0.05
+  },
+  "trailing_stop": {
+    "support": true,
+    "ratio": -0.04
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "vars": {
+    "ma3_1": {"func": "sma", "params": [3], "cdl_type": 1, "sources": ["close"], "unary": true},
+    "ma5_1": {"func": "sma", "params": [5], "cdl_type": 1, "sources": ["close"], "unary": true},
+    "ma10_1": {"func": "sma", "params": [10], "cdl_type": 1, "sources": ["close"], "unary": true},
+    "ma20_1": {"func": "sma", "params": [20], "cdl_type": 1, "sources": ["close"], "unary": true},
+    "ma10_3": {"func": "sma", "params": [10], "cdl_type": 3, "sources": ["close"], "unary": true},
+    "ma20_3": {"func": "sma", "params": [20], "cdl_type": 3, "sources": ["close"], "unary": true},
+    "ma10_5": {"func": "sma", "params": [10], "cdl_type": 5, "sources": ["close"], "unary": true},
+    "ma20_5": {"func": "sma", "params": [20], "cdl_type": 5, "sources": ["close"], "unary": true},
+    "ma10_15": {"func": "sma", "params": [10], "cdl_type": 15, "sources": ["close"], "unary": true},
+    "ma20_15": {"func": "sma", "params": [20], "cdl_type": 15, "sources": ["close"], "unary": true},
+    "ma10_30": {"func": "sma", "params": [10], "cdl_type": 15, "sources": ["close"], "unary": true},
+    "ma20_30": {"func": "sma", "params": [20], "cdl_type": 15, "sources": ["close"], "unary": true},
+    "bband_1m": {"func": "bbands", "params": [20, 3.5, 2.0, 0], "cdl_type": 1, "sources": ["vol"], "unary": false}
+    },
+  "buy_systems": {
+    "system1": {"alias": "price1", "left": "close", "op": ">", "right": "ma3_1"},
+    "system2": {"alias": "price2", "left": "close", "op": ">", "right": "ma5_1"},
+    "system3": {"alias": "price3", "left": "close", "op": ">", "right": "ma10_1"},
+    "system4": {"alias": "price4", "left": "close", "op": ">", "right": "ma20_1"},
+    "system5": {"alias": "ma3", "left": "ma10_3", "op": ">", "right": "ma20_3"},
+    "system6": {"alias": "ma5", "left": "ma10_5", "op": ">", "right": "ma20_5"},
+    "system7": {"alias": "ma15", "left": "ma10_15", "op": ">", "right": "ma20_15"},
+    "system8": {"alias": "ma30", "left": "ma10_30", "op": ">", "right": "ma20_30"}
+  },
+  "buy_system_op": "system1 and system2 and system3 and system4 and system5 and system6 and system7 and system8",
+  "sell_systems": {
+    "system1": {"alias": "ma30", "left": "ma10_30", "op": "<", "right": "ma20_30"},
+    "system2": {"alias": "price1", "left": "close", "op": "<", "right": "ma10_30"},
+    "system3": {"alias": "ma10", "left": "ma10_5", "op": "<", "right": "ma20_5"}
+  },
+  "sell_system_op": "system1 or system2 or system3"
+}

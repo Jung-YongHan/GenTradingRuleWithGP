@@ -4,10 +4,12 @@ import json
 import logging
 import multiprocessing
 import random
+import sys
 import time
 
 from deap import base, creator, gp, tools
 
+from src.configs.bt4_config import load_bt4_config
 from src.configs.constants import CPU_COUNT, RANDOM_SEED
 
 # --- 설정 및 모듈 임포트 ---
@@ -20,7 +22,7 @@ from src.configs.gp_configs import (
     N_POPULATION,
 )
 from src.domain.condition import ConditionManager
-from src.gp.evaluator import clear_cache, get_cache_stats
+from src.gp.evaluator import clear_cache, get_cache_stats, set_bt4_config
 from src.gp.toolbox import create_primitive_set, create_toolbox
 from src.strategy.parser import parse_gp_tree_to_json
 from src.strategy.validator import validate_and_clean_strategy
@@ -162,6 +164,30 @@ def main(pool: multiprocessing.Pool):
 
 if __name__ == "__main__":
     random.seed(RANDOM_SEED)
+
+    # BT4 백테스트 설정 로드 및 전역 설정
+    # 여기서 원하는 설정 파일을 선택할 수 있습니다
+    bt4_config_file = "base_config.json"  # 다른 파일로 변경 가능
+
+    print("=" * 60)
+    print("🔧 BT4 백테스트 설정 로드")
+    print("=" * 60)
+    try:
+        bt4_config = load_bt4_config(bt4_config_file)
+        set_bt4_config(bt4_config)
+        print(f"✓ 설정 파일 로드 완료: {bt4_config_file}")
+        print(f"  - 거래소: {bt4_config.get('ex_type', 'N/A')}")
+        bt_start = bt4_config.get("bt_start", "N/A")
+        bt_end = bt4_config.get("bt_end", "N/A")
+        print(f"  - 기간: {bt_start} ~ {bt_end}")
+        print(f"  - 마켓: {', '.join(bt4_config.get('markets', []))}")
+        init_bal = bt4_config.get("init_balance", 0)
+        print(f"  - 초기자본: {init_bal:,}원")
+    except Exception as e:
+        print(f"✗ 설정 파일 로드 실패: {e}")
+        print("  기본 설정을 사용할 수 없습니다. 프로그램을 종료합니다.")
+        sys.exit(1)
+    print()
 
     # 시스템 전체 CPU 개수와 설정된 CPU 개수 출력
     system_cpu_count = multiprocessing.cpu_count()

@@ -1,0 +1,61 @@
+{
+  "stgy_name": "TurtleTrading_Hdg",
+  "module_name": "TurtleTradingStrategy",
+  "bt_start": "2018-10-01T08:59:00",
+  "bt_end": "2023-05-14T08:59:00",
+  "markets": ["KRW-BTC", "KRW-ETH", "KRW-XRP"],
+  "cdl_type": 240,
+  "init_balance": 10000000,
+  "slippage" : 0.005,
+  "bt_times" : ["00:59", "04:59", "08:59", "12:59", "16:59", "20:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.04
+  },
+  "timeframe":{
+    "support": false,
+    "timeframes": ["08:59", "16:59"],
+    "timegap": 1
+  },
+  "fixed": {
+    "support": false,
+    "hdge": true,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": false,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.02
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "vars": {
+    "trb1": {"func": "trb", "params": [24], "cdl_type": 240, "sources": ["high", "low"], "unary": false},
+    "trb2": {"func": "trb", "params": [48], "cdl_type": 240, "sources": ["high", "low"], "unary": false},
+    "ema1": {"func": "ema", "params": [30], "cdl_type": 240, "sources": ["close"], "unary": true},
+    "ema2": {"func": "ema", "params": [60], "cdl_type": 240, "sources": ["close"], "unary": true},
+    "ema3": {"func": "ema", "params": [100], "cdl_type": 240, "sources": ["close"], "unary": true}
+  },
+  "buy_systems": {
+    "system1": {"alias": "ema3_1", "left": "close", "op": ">", "right": "ema3"},
+    "system2": {"alias": "ema1_2", "left": "ema1", "op": ">", "right": "ema2"},
+    "system3": {"alias": "trb1", "left": "close", "op": ">", "right": "trb1[0]"},
+    "system4": {"alias": "ema3_2", "left": "close", "op": ">", "right": "ema3"},
+    "system5": {"alias": "trb2", "left": "close", "op": ">", "right": "trb2[0]"}
+  },
+  "buy_system_op": "(system1 and system2 and system3) or (system4 and system2 and system5)",
+  "sell_systems": {
+    "system1": {"alias": "trb1", "left": "close", "op": "<", "right": "trb1[1]"},
+    "system2": {"alias": "trb2", "left": "close", "op": "<", "right": "trb2[1]"}
+  },
+  "sell_system_op": "system1 or system2"
+}

@@ -1,0 +1,52 @@
+{
+  "stgy_name": "dummy",
+  "module_name": "DefaultStrategy",
+  "bt_start": "2018-10-01 08:59:00",
+  "bt_end": "2024-05-30 08:59:00",
+  "markets": ["KRW-BTC", "KRW-ETH", "KRW-XRP"],
+  "cdl_type": 30,
+  "init_balance": 10000000,
+  "slippage": 0.0008,
+  "bt_times": [],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.04
+  },
+  "fixed": {
+    "hdge": false,
+    "support": false,
+    "trade_ratio": 0.4
+  },
+  "weighted":  {
+    "top_n": [],
+    "support": false
+  },
+  "stop_loss": {
+    "ratio": -0.04,
+    "support": false
+  },
+  "timeframe": {
+    "support": false,
+    "timegap": 0,
+    "timeframes": []
+  },
+  "trailing_stop": {
+    "ratio": -0.02, "support": false
+  },
+  "take_profit": {
+    "ratio": 0.07, "support": false
+  },
+  "reserved_vars": [],
+  "vars": {
+    "sma1": {"func": "sma", "unary": true, "params": [18], "sources": ["high"], "cdl_type": 240},
+    "sma2": {"func": "sma", "unary": true, "params": [96], "sources": ["close"], "cdl_type": 240}
+  },
+  "buy_systems": {
+    "system1": {"op": ">", "left": "sma1", "alias": "system1", "right": "sma2"}
+  },
+  "buy_system_op": "system1",
+  "sell_systems": {
+    "system1": {"op": "<", "left": "sma1", "alias": "system1", "right": "sma2"}
+  },
+  "sell_system_op": "system1"
+}

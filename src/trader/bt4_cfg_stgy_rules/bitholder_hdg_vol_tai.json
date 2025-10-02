@@ -1,0 +1,52 @@
+{
+  "stgy_name": "SuperWinningSession_TAI_Hedge",
+  "module_name": "SuperWinningSessionStrategy",
+  "bt_start": "2018-10-01T08:59:00",
+  "bt_end": "2023-12-31T08:59:00",
+  "markets": ["KRW-BTC"],
+  "cdl_type": 60,
+  "init_balance": 10000000,
+  "slippage" : 0.0008,
+  "bt_times" : ["00:59","08:59","17:59","19:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.99
+  },
+  "timeframe":{
+    "support": true,
+    "timeframes": ["04:59", "07:59", "09:59", "10:59", "11:59", "12:59", "13:59", "17:59", "18:59", "19:59", "20:59", "23:59"],
+    "timegap": 5
+  },
+  "fixed": {
+    "support": false,
+    "hdge": true,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": false,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.02
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "vars": {
+    "cci": {"func": "cci", "params": [21], "cdl_type": 1474, "sources": ["high", "low", "close"], "unary": true}
+  },
+  "buy_systems": {
+    "system1": {"alias": "cci", "left": "cci", "op": ">", "right": "-50"}
+  },
+  "buy_system_op": "system1",
+  "sell_systems": {
+    "system1": {"alias": "cci", "left": "cci", "op": "<", "right": "-50"}
+  },
+  "sell_system_op": "system1"
+}

@@ -1,0 +1,64 @@
+{
+  "stgy_name": "SWKimStrategy1_Hdge",
+  "module_name": "SWKimStrategy",
+  "bt_start": "2018-10-01T08:59:00",
+  "bt_end": "2024-11-25T08:59:00",
+  "markets": ["KRW-BTC", "KRW-ETH", "KRW-XRP"],
+  "cdl_type": 60,
+  "init_balance": 10000000,
+  "slippage" : 0.005,
+  "bt_times" : ["08:59", "16:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.02
+  },
+  "timeframe":{
+    "support": true,
+    "timeframes": ["00:59", "01:59", "02:59", "03:59", "04:59", "05:59","06:59",
+                      "07:59", "08:59", "09:59", "10:59", "11:59", "12:59","13:59",
+                      "14:59", "15:59", "16:59", "17:59", "18:59", "19:59","20:59",
+                      "21:59", "22:59", "23:59"],
+    "timegap": 0
+  },
+  "fixed": {
+    "support": false,
+    "hdge": false,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": false,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.02
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "vars": {
+    "pdi1": {"func": "PLUS_DI", "params": [14], "cdl_type": 240, "sources": ["high","low","close"], "unary": true},
+    "mdi1": {"func": "MINUS_DI", "params": [14], "cdl_type": 240, "sources": ["high","low","close"], "unary": true},
+    "pdi2": {"func": "PLUS_DI", "params": [14], "cdl_type": 240, "sources": ["high","low","close"], "unary": true},
+    "mdi2": {"func": "MINUS_DI", "params": [14], "cdl_type": 240, "sources": ["high","low","close"], "unary": true},
+    "pdi3": {"func": "PLUS_DI", "params": [14], "cdl_type": 240, "sources": ["high","low","close"], "unary": true},
+    "mdi3": {"func": "MINUS_DI", "params": [14], "cdl_type": 240, "sources": ["high","low","close"], "unary": true}
+  },
+  "buy_systems": {
+    "system1": {"alias": "di1", "left": "pdi1", "op": ">", "right": "mdi1", "market" : "KRW-BTC"},
+    "system2": {"alias": "di2", "left": "pdi2", "op": ">", "right": "mdi2", "market" : "KRW-ETH"},
+    "system3": {"alias": "di3", "left": "pdi3", "op": ">", "right": "mdi3", "market" : "KRW-XRP"}
+  },
+  "buy_system_op": "system1 or system2 or system3",
+  "sell_systems": {
+    "system1": {"alias": "di", "left": "pdi1", "op": "<", "right": "mdi1", "market" : "KRW-BTC"},
+    "system2": {"alias": "di", "left": "pdi2", "op": "<", "right": "mdi2", "market" : "KRW-ETH"},
+    "system3": {"alias": "di", "left": "pdi3", "op": "<", "right": "mdi3", "market" : "KRW-XRP"}
+  },
+  "sell_system_op": "system1 or system3 or system3"
+}

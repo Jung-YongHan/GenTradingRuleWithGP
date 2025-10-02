@@ -1,0 +1,72 @@
+{
+  "stgy_name": "CompositeBullBearStrategy",
+  "module_name": "CompositeStrategy",
+  "bt_start": "2021-10-01T09:00:00",
+  "bt_end": "2023-12-31T09:00:00",
+  "markets": ["KRW-BTC", "KRW-ETH"],
+  "cdl_type": 60,
+  "init_balance": 10000000,
+  "slippage" : 0.005,
+  "bt_times" : ["07:59", "08:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.0306044914960572
+  },
+  "timeframe":{
+    "support": false,
+    "timeframes": ["7:59", "8:59"],
+    "timegap": 1
+  },
+  "fixed": {
+    "support": false,
+    "hdge": true,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": false,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.02
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "vars": {
+    "trade_time1" : "07:59",
+    "trade_time2" : "08:59",
+    "ma1": {"func": "sma", "params": [10], "cdl_type": 1440, "sources": ["low"], "unary": true},
+    "ma2": {"func": "sma", "params": [8], "cdl_type": 1440, "sources": ["open"], "unary": true},
+    "ma3": {"func": "sma", "params": [41], "cdl_type": 1440, "sources": ["open"], "unary": true},
+    "ma4": {"func": "sma", "params": [62], "cdl_type": 1440, "sources": ["open"], "unary": true},
+    "ma_decision": {"func": "sma", "params": [72], "cdl_type": 1440, "sources": ["low"], "unary": true}
+  },
+  "buy_systems": {
+    "system1" :{"alias": "decision", "left": "close", "op": ">", "right": "ma_decision"},
+    "system2": {"alias": "ma1", "left": "close", "op": ">", "right": "ma1"},
+    "system3": {"alias": "ma2", "left": "close", "op": ">", "right": "ma2"},
+    "system4": {"alias": "ma3", "left": "close", "op": ">", "right": "ma3"},
+    "system5": {"alias": "ma4", "left": "close", "op": ">", "right": "ma4"},
+    "system6": {"alias": "crossover", "left": "ma2", "op": ">", "right": "ma4"},
+    "system7": {"alias": "time", "left": "time", "op": "==", "right": "trade_time1"},
+    "system8": {"alias": "time", "left": "time", "op": "==", "right": "trade_time2"}
+  },
+  "buy_system_op": "(system1 and system2 and system3 and system4 and system5 and system6 and (system7 or system8)) or (not system1 and system2 and system3 and system4 and system5 and (system7 or system8))",
+  "sell_systems": {
+    "system1" :{"alias": "decision", "left": "close", "op": ">", "right": "ma_decision"},
+    "system2": {"alias": "ma1", "left": "close", "op": "<", "right": "ma1"},
+    "system3": {"alias": "ma2", "left": "close", "op": "<", "right": "ma2"},
+    "system4": {"alias": "ma3", "left": "close", "op": "<", "right": "ma3"},
+    "system5": {"alias": "ma4", "left": "close", "op": "<", "right": "ma4"},
+    "system6": {"alias": "crossover", "left": "ma2", "op": "<", "right": "ma4"},
+    "system7": {"alias": "time", "left": "time", "op": "==", "right": "trade_time1"},
+    "system8": {"alias": "time", "left": "time", "op": "==", "right": "trade_time2"}
+  },
+  "sell_system_op": "(system1 and (system2 or system3 or system4 or system5 or system6) and (system7 or system8)) or (not system1 and (system2 or system3 or system4 or system5) and (system7 or system8))"
+}

@@ -1,0 +1,9 @@
+{
+  "$id": "https://example.com/schemas/main_schema.json",
+  "type": "object",
+  "properties": {
+    "common": {
+      "$ref": "common_schema.json"
+    }
+  }
+}

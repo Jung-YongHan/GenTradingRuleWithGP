@@ -1,0 +1,67 @@
+{
+  "stgy_name": "WinningSession_Day",
+  "module_name": "WinningSessionStrategy",
+  "bt_start": "2020-01-01T08:59:00",
+  "bt_end": "2022-03-31T08:59:00",
+  "markets": ["KRW-BTC", "KRW-ETH", "KRW-XRP"],
+  "cdl_type": 60,
+  "init_balance": 5000000,
+  "slippage" : 0.005,
+  "bt_times" : ["08:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.04
+  },
+  "timeframe":{
+    "support": true,
+    "timeframes": ["08:59", "17:59"],
+    "timegap": 1
+  },
+  "fixed": {
+    "support": false,
+    "hdge": false,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": true,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.10
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "vars": {
+    "ma": {"func": "sma", "params": [3], "cdl_type": 1440, "sources": ["close"], "unary": true},
+    "rsi":{"func": "rsi", "params": [14], "cdl_type": 1440,"sources": ["close"], "unary": true},
+    "ma_rsi":{"func": "sma", "params": [5], "cdl_type": 1440,"sources": ["rsi"], "unary": true},
+    "macd1": {"func": "macd", "params": [6, 19, 6], "cdl_type": 1440, "sources": ["close"], "unary": false},
+    "trb": {"func": "trb", "params": [5], "cdl_type": 1440, "sources": ["high", "low"], "unary": false},
+    "ma_trb": {"func": "sma", "params": [5], "cdl_type": 1440, "sources": ["trb[1]"], "unary": true}
+  },
+  "buy_systems": {
+    "system1": {"alias": "ma", "left": "close", "op": ">", "right": "ma"},
+    "system2": {"alias": "rsi", "left": "rsi", "op": ">", "right": "50"},
+    "system3": {"alias": "rsi", "left": "rsi", "op": ">", "right": "40"},
+    "system4": {"alias": "macd", "left": "macd1[0]", "op": ">", "right": "macd1[1]"},
+    "system5": {"alias": "trb", "left": "close", "op": ">", "right": "trb[1]"},
+    "system6": {"alias": "ma_trb", "left": "close", "op": ">", "right": "ma_trb"}
+  },
+  "buy_system_op": "system1 and system2 and system3 and system4 and system5 and system6",
+  "sell_systems": {
+    "system1": {"alias": "ma2", "left": "close", "op": "<", "right": "ma"},
+    "system2": {"alias": "rsi", "left": "rsi", "op": "<", "right": "50"},
+    "system3": {"alias": "rsi", "left": "rsi", "op": "<", "right": "40"},
+    "system4": {"alias": "macd", "left": "macd1[0]", "op": "<", "right": "macd1[1]"},
+    "system5": {"alias": "trb", "left": "close", "op": "<", "right": "trb[1]"},
+    "system6": {"alias": "ma_trb", "left": "close", "op": "<", "right": "ma_trb"}
+  },
+  "sell_system_op": "system2 or system3 or system4 or system5 or system6"
+}

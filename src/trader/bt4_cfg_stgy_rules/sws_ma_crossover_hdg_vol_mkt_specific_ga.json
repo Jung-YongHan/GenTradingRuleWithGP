@@ -1,0 +1,121 @@
+{
+  "stgy_name": "SuperWinningSessionPoweredByMACrossOver_Hdge",
+  "module_name": "SuperWinningSessionStrategy",
+  "ga_exec" : true,
+  "ga_exec_mode" : "BEST_EFFORT",
+  "ga_exec_obj" : "BALANCED",
+  "bt_start": "2018-10-01T08:59:00",
+  "bt_end": "2024-11-25T08:59:00",
+  "markets": ["KRW-BTC", "KRW-ETH", "KRW-XRP"],
+  "ga_markets" : false,
+  "cdl_type": 60,
+  "init_balance": 10000000,
+  "slippage" : 0.005,
+  "bt_times" : ["08:59", "12:59", "16:59", "20:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.04
+  },
+  "timeframe":{
+    "support": true,
+    "timeframes": ["00:59", "04:59", "08:59", "12:59", "16:59", "20:59", "23:59"],
+    "timegap": 1,
+    "ga_timeframes" : true,
+    "ga_timegap": [1 , 5]
+  },
+  "fixed": {
+    "support": false,
+    "hdge": true,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": false,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.02
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "vars": {
+    "ma0": {"func": "sma", "params": [3], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,200, "Integer"]]},
+    "ma1": {"func": "sma", "params": [3], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma2": {"func": "sma", "params": [5], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma3": {"func": "sma", "params": [10], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma4": {"func": "sma", "params": [20], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma5": {"func": "sma", "params": [20], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma6": {"func": "sma", "params": [60], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma7": {"func": "sma", "params": [7], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma8": {"func": "sma", "params": [15], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma9": {"func": "sma", "params": [15], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma10": {"func": "sma", "params": [20], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma11": {"func": "sma", "params": [60], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma12": {"func": "sma", "params": [7], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma13": {"func": "sma", "params": [15], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]},
+    "ma14": {"func": "sma", "params": [15], "cdl_type": 1474, "sources": ["close"], "unary": true,
+            "ga_params": [[5,100, "Integer"]]}
+  },
+  "buy_systems": {
+    "system0": {"alias": "ma0", "left": "close", "op": ">", "right": "ma0", "market" : "KRW-BTC"},
+    "system1": {"alias": "ma1", "left": "close", "op": ">", "right": "ma1", "market" : "KRW-BTC"},
+    "system2": {"alias": "ma2", "left": "close", "op": ">", "right": "ma2", "market" : "KRW-BTC"},
+    "system3": {"alias": "ma3", "left": "close", "op": ">", "right": "ma3", "market" : "KRW-BTC"},
+    "system4": {"alias": "ma4", "left": "close", "op": ">", "right": "ma4", "market" : "KRW-BTC"},
+    "system5": {"alias": "crossover1", "left": "ma2", "op": ">", "right": "ma4", "market" : "KRW-BTC"},
+    "system6": {"alias": "ma5", "left": "close", "op": ">", "right": "ma5", "market" : "KRW-ETH"},
+    "system7": {"alias": "ma6", "left": "close", "op": ">", "right": "ma6", "market" : "KRW-ETH"},
+    "system8": {"alias": "ma7", "left": "close", "op": ">", "right": "ma7", "market" : "KRW-ETH"},
+    "system9": {"alias": "ma8", "left": "close", "op": ">", "right": "ma8", "market" : "KRW-ETH"},
+    "system10": {"alias": "ma9", "left": "close", "op": ">", "right": "ma9", "market" : "KRW-ETH"},
+    "system11": {"alias": "crossover2", "left": "ma7", "op": ">", "right": "ma9", "market" : "KRW-ETH"},
+    "system12": {"alias": "ma10", "left": "close", "op": ">", "right": "ma10", "market" : "KRW-XRP"},
+    "system13": {"alias": "ma11", "left": "close", "op": ">", "right": "ma11", "market" : "KRW-XRP"},
+    "system14": {"alias": "ma12", "left": "close", "op": ">", "right": "ma12", "market" : "KRW-XRP"},
+    "system15": {"alias": "ma13", "left": "close", "op": ">", "right": "ma13", "market" : "KRW-XRP"},
+    "system16": {"alias": "ma14", "left": "close", "op": ">", "right": "ma14", "market" : "KRW-XRP"},
+    "system17": {"alias": "crossover2", "left": "ma12", "op": ">", "right": "ma14", "market" : "KRW-XRP"}
+  },
+  "buy_system_op": "(system0 and system1 and system2 and system3 and system4 and system5) or (system6 and system7 and system8 and system9 and system10 and system11) or (system12 and system13 and system14 and system15 and system16 and system17)",
+  "sell_systems": {
+    "system0": {"alias": "ma0", "left": "close", "op": ">", "right": "ma0", "market" : "KRW-BTC"},
+    "system1": {"alias": "ma1", "left": "close", "op": "<", "right": "ma1", "market" : "KRW-BTC"},
+    "system2": {"alias": "ma2", "left": "close", "op": "<", "right": "ma2", "market" : "KRW-BTC"},
+    "system3": {"alias": "ma3", "left": "close", "op": "<", "right": "ma3", "market" : "KRW-BTC"},
+    "system4": {"alias": "ma4", "left": "close", "op": "<", "right": "ma4", "market" : "KRW-BTC"},
+    "system5": {"alias": "crossover1", "left": "ma2", "op": "<", "right": "ma4", "market" : "KRW-BTC"},
+    "system6": {"alias": "ma5", "left": "close", "op": ">", "right": "ma5", "market" : "KRW-ETH"},
+    "system7": {"alias": "ma6", "left": "close", "op": "<", "right": "ma6", "market" : "KRW-ETH"},
+    "system8": {"alias": "ma7", "left": "close", "op": "<", "right": "ma7", "market" : "KRW-ETH"},
+    "system9": {"alias": "ma8", "left": "close", "op": "<", "right": "ma8", "market" : "KRW-ETH"},
+    "system10": {"alias": "ma9", "left": "close", "op": "<", "right": "ma9", "market" : "KRW-ETH"},
+    "system11": {"alias": "crossover2", "left": "ma7", "op": "<", "right": "ma9", "market" : "KRW-ETH"},
+    "system12": {"alias": "ma10", "left": "close", "op": ">", "right": "ma10", "market" : "KRW-XRP"},
+    "system13": {"alias": "ma11", "left": "close", "op": "<", "right": "ma11", "market" : "KRW-XRP"},
+    "system14": {"alias": "ma12", "left": "close", "op": "<", "right": "ma12", "market" : "KRW-XRP"},
+    "system15": {"alias": "ma13", "left": "close", "op": "<", "right": "ma13", "market" : "KRW-XRP"},
+    "system16": {"alias": "ma14", "left": "close", "op": "<", "right": "ma14", "market" : "KRW-XRP"},
+    "system17": {"alias": "crossover2", "left": "ma12", "op": "<", "right": "ma14", "market" : "KRW-XRP"}
+  },
+  "sell_system_op": "(not system0 and (system1 or system2 or system3 or system4 or system5)) or (not system6 and (system7 or system8 or system9 or system10 or system11)) or (not system12 and (system13 or system14 or system15 or system16 or system17))"
+}

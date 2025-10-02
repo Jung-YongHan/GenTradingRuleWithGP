@@ -1,0 +1,80 @@
+{
+  "$id": "http://ssel.asuscomm.com:9080/v1/vars_schema.json",
+  "version": "1.0.0",
+  "definitions": {
+    "vars": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "func": {
+                  "type": "string"
+                },
+                "params": {
+                  "type": "array"
+                },
+                "cdl_type": {
+                  "type": "integer",
+                  "enum": [
+                    1,
+                    3,
+                    5,
+                    15,
+                    30,
+                    60,
+                    240,
+                    1440,
+                    1474
+                  ]
+                },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1
+                },
+                "unary": {
+                  "type": "boolean"
+                },
+                "ga_params": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "additionalItems": false
+                  }
+                },
+                "ga_sources": {
+                  "type": "array"
+                }
+              },
+              "required": [
+                "func",
+                "params",
+                "cdl_type",
+                "sources",
+                "unary"
+              ]
+            },
+            {
+              "type": "string"
+            }
+            ,
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^([01]\\d|2[0-3]):59$"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

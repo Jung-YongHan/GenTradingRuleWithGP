@@ -1,0 +1,63 @@
+{
+  "stgy_name": "WS_Hdge_PairTrading",
+  "module_name": "WinningSessionStrategy",
+  "pt_exec" : true,
+  "bt_start": "2020-01-01T08:59:00",
+  "bt_end": "2022-03-31T08:59:00",
+  "markets": ["KRW-BTC", "KRW-ETH", "KRW-XRP"],
+  "cdl_type": 60,
+  "init_balance": 10000000,
+  "slippage" : 0.0008,
+  "bt_times" : ["08:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.04
+  },
+  "timeframe":{
+    "support": true,
+    "timeframes": ["08:59", "17:59"],
+    "timegap": 1
+  },
+  "fixed": {
+    "support": false,
+    "hdge": true,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": false,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.02
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "vars": {
+    "ma1": {"func": "sma", "params": [5], "cdl_type": 1474, "sources": ["close"], "unary": true}
+  },
+  "buy_systems": {
+    "system1": {"alias": "ma", "left": "close", "pt_left_market" : "KRW-BTC", "op": ">", "right": "ma1",
+        "pt_right_market" : "KRW-BTC",  "pt_tgt_market" : "KRW-ETH"},
+    "system2": {"alias": "ma", "left": "close", "pt_left_market" : "KRW-ETH", "op": ">", "right": "ma1",
+        "pt_right_market" : "KRW-ETH", "pt_tgt_market" : "KRW-XRP"},
+    "system3": {"alias": "ma", "left": "close", "pt_left_market" : "KRW-XRP", "op": ">", "right": "ma1",
+        "pt_right_market" : "KRW-XRP",  "pt_tgt_market" : "KRW-BTC"}
+  },
+  "buy_system_op": "system1 or system2 or system3",
+  "sell_systems": {
+    "system1": {"alias": "ma", "left": "close", "pt_left_market" : "KRW-BTC", "op": "<", "right": "ma1",
+        "pt_right_market" : "KRW-BTC",  "pt_tgt_market" : "KRW-ETH"},
+    "system2": {"alias": "ma", "left": "close", "pt_left_market" : "KRW-ETH", "op": "<", "right": "ma1",
+        "pt_right_market" : "KRW-ETH", "pt_tgt_market" : "KRW-XRP"},
+    "system3": {"alias": "ma", "left": "close", "pt_left_market" : "KRW-XRP", "op": "<", "right": "ma1",
+        "pt_right_market" : "KRW-XRP",  "pt_tgt_market" : "KRW-BTC"}
+  },
+  "sell_system_op": "system1 or system2 or system3"
+}

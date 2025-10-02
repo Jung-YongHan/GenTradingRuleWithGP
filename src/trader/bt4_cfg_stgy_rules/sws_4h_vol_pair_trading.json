@@ -1,0 +1,80 @@
+{
+  "stgy_name": "SuperWinningSession_4H",
+  "module_name": "SuperWinningSessionStrategy",
+  "pt_exec" : true,
+  "bt_start": "2018-10-01T08:59:00",
+  "bt_end": "2023-12-31T08:59:00",
+  "markets": ["KRW-BTC", "KRW-ETH"],
+  "cdl_type": 60,
+  "init_balance": 10000000,
+  "slippage" : 0.0008,
+  "bt_times" : ["00:59", "04:59", "08:59", "12:59", "16:59", "20:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.028884725757829813
+  },
+  "timeframe":{
+    "support": false,
+    "timeframes": ["00:59", "04:59", "08:59", "12:59", "16:59", "20:59"],
+    "timegap": 1
+  },
+  "fixed": {
+    "support": false,
+    "hdge": false,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": false,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.02
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "vars": {
+    "trade_time1" : "00:59",
+    "trade_time2" : "04:59",
+    "trade_time3" : "08:59",
+    "trade_time4" : "12:59",
+    "trade_time5" : "16:59",
+    "trade_time6" : "20:59",
+    "ma1": {"func": "sma", "params": [5], "cdl_type": 1440, "sources": ["open"], "unary": true},
+    "ma2": {"func": "sma", "params": [20], "cdl_type": 1440, "sources": ["close"], "unary": true},
+    "ma3": {"func": "sma", "params": [18], "cdl_type": 1440, "sources": ["high"], "unary": true},
+    "ma4": {"func": "sma", "params": [43], "cdl_type": 1440, "sources": ["high"], "unary": true}
+  },
+  "buy_systems": {
+    "system1": {"alias": "time", "left": "time", "op": "==", "right": "trade_time1"},
+    "system2": {"alias": "time", "left": "time", "op": "==", "right": "trade_time2"},
+    "system3": {"alias": "time", "left": "time", "op": "==", "right": "trade_time3"},
+    "system4": {"alias": "time", "left": "time", "op": "==", "right": "trade_time4"},
+    "system5": {"alias": "time", "left": "time", "op": "==", "right": "trade_time5"},
+    "system6": {"alias": "time", "left": "time", "op": "==", "right": "trade_time6"},
+    "system7": {"alias": "ma1", "left": "close", "pt_left_market" : "KRW-BTC", "op": ">", "right": "ma1","pt_right_market" :  "KRW-BTC", "pt_tgt_market" :  "KRW-ETH"},
+    "system8": {"alias": "ma2", "left": "close", "pt_left_market" : "KRW-BTC", "op": ">", "right": "ma2","pt_right_market" :  "KRW-BTC", "pt_tgt_market" :  "KRW-ETH"},
+    "system9": {"alias": "ma3", "left": "close", "pt_left_market" : "KRW-BTC", "op": ">", "right": "ma3","pt_right_market" :  "KRW-BTC", "pt_tgt_market" :  "KRW-ETH"},
+    "system10": {"alias": "ma4", "left": "close", "pt_left_market" : "KRW-BTC", "op": ">", "right": "ma4","pt_right_market" :  "KRW-BTC", "pt_tgt_market" :  "KRW-ETH"}
+  },
+  "buy_system_op": "(system1 or system2 or system3 or system4 or system5 or system6) and system7 and system8 and system9 and system10",
+  "sell_systems": {
+    "system1": {"alias": "time", "left": "time", "op": "==", "right": "trade_time1"},
+    "system2": {"alias": "time", "left": "time", "op": "==", "right": "trade_time2"},
+    "system3": {"alias": "time", "left": "time", "op": "==", "right": "trade_time3"},
+    "system4": {"alias": "time", "left": "time", "op": "==", "right": "trade_time4"},
+    "system5": {"alias": "time", "left": "time", "op": "==", "right": "trade_time5"},
+    "system6": {"alias": "time", "left": "time", "op": "==", "right": "trade_time6"},
+    "system7": {"alias": "ma1", "left": "close", "pt_left_market" : "KRW-BTC", "op": "<", "right": "ma1","pt_right_market" :  "KRW-BTC", "pt_tgt_market" :  "KRW-ETH"},
+    "system8": {"alias": "ma2", "left": "close", "pt_left_market" : "KRW-BTC", "op": "<", "right": "ma2","pt_right_market" :  "KRW-BTC", "pt_tgt_market" :  "KRW-ETH"},
+    "system9": {"alias": "ma3", "left": "close", "pt_left_market" : "KRW-BTC", "op": "<", "right": "ma3","pt_right_market" :  "KRW-BTC", "pt_tgt_market" :  "KRW-ETH"},
+    "system10": {"alias": "ma4", "left": "close", "pt_left_market" : "KRW-BTC", "op": "<", "right": "ma4","pt_right_market" :  "KRW-BTC", "pt_tgt_market" :  "KRW-ETH"}
+  },
+  "sell_system_op": "(system1 or system2 or system3 or system4 or system5 or system6) and system7 and system8 and system9 and system10"
+}

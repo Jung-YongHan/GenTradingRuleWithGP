@@ -1,0 +1,96 @@
+{
+  "stgy_name": "SuperWinningSession_4H",
+  "module_name": "SuperWinningSessionStrategy",
+  "ga_exec" : true,
+  "bt_start": "2018-10-01T08:59:00",
+  "bt_end": "2023-12-31T08:59:00",
+  "markets": ["KRW-BTC", "KRW-ETH"],
+  "ga_markets" : true,
+  "cdl_type": 60,
+  "init_balance": 10000000,
+  "slippage" : 0.0008,
+  "bt_times" : ["00:59", "04:59", "08:59", "12:59", "16:59", "20:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.04,
+    "ga_vol_tgt" : [0.02,0.03,0.04]
+  },
+  "timeframe":{
+    "support": false,
+    "timeframes": ["00:59", "01:59", "02:59", "03:59", "04:59", "05:59","06:59",
+                  "07:59", "08:59", "09:59", "10:59", "11:59", "12:59","13:59",
+                  "14:59", "15:59", "16:59", "17:59", "18:59", "19:59","20:59",
+                  "21:59", "22:59", "23:59"],
+    "timegap": 1,
+    "ga_timeframes" : true,
+    "ga_timegap": [1 , 5]
+  },
+  "fixed": {
+    "support": false,
+    "hdge": false,
+    "trade_ratio": 0.4,
+    "ga_trade_ratio" : [0.2, 0.6]
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1],
+    "ga_top_n" : [[0.3, 0.5], [0.2, 0.3],[0.1, 0.2]]
+  },
+  "stop_loss": {
+    "support": false,
+    "ratio": -0.04,
+    "ga_ratio": [-0.1, -0.01]
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.02,
+    "ga_ratio": [-0.1, -0.01]
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07,
+    "ga_ratio": [0.03, 0.1]
+  },
+  "vars": {
+    "trade_time1" : "00:59",
+    "trade_time2" : "04:59",
+    "trade_time3" : "08:59",
+    "trade_time4" : "12:59",
+    "trade_time5" : "16:59",
+    "trade_time6" : "20:59",
+    "ma1": {"func": "sma", "params": [3], "cdl_type": 1440, "sources": ["close"], "unary": true,
+            "ga_params": [[3,10, "Integer"]], "ga_sources" : ["open", "high", "low", "close"]},
+    "ma2": {"func": "sma", "params": [5], "cdl_type": 1440, "sources": ["close"], "unary": true,
+            "ga_params": [[5,20, "Integer"]], "ga_sources" : ["open", "high", "low", "close"]},
+    "ma3": {"func": "sma", "params": [10], "cdl_type": 1440, "sources": ["close"], "unary": true,
+            "ga_params": [[10,50, "Integer"]], "ga_sources" : ["open", "high", "low", "close"]},
+    "ma4": {"func": "sma", "params": [20], "cdl_type": 1440, "sources": ["close"], "unary": true,
+            "ga_params": [[20,100, "Integer"]], "ga_sources" : ["open", "high", "low", "close"]}
+  },
+  "buy_systems": {
+    "system1": {"alias": "time", "left": "time", "op": "==", "right": "trade_time1"},
+    "system2": {"alias": "time", "left": "time", "op": "==", "right": "trade_time2"},
+    "system3": {"alias": "time", "left": "time", "op": "==", "right": "trade_time3"},
+    "system4": {"alias": "time", "left": "time", "op": "==", "right": "trade_time4"},
+    "system5": {"alias": "time", "left": "time", "op": "==", "right": "trade_time5"},
+    "system6": {"alias": "time", "left": "time", "op": "==", "right": "trade_time6"},
+    "system7": {"alias": "ma1", "left": "close", "op": ">", "right": "ma1"},
+    "system8": {"alias": "ma2", "left": "close", "op": ">", "right": "ma2"},
+    "system9": {"alias": "ma3", "left": "close", "op": ">", "right": "ma3"},
+    "system10": {"alias": "ma4", "left": "close", "op": ">", "right": "ma4"}
+  },
+  "buy_system_op": "(system1 or system2 or system3 or system4 or system5 or system6) and system7 and system8 and system9 and system10",
+  "sell_systems": {
+    "system1": {"alias": "time", "left": "time", "op": "==", "right": "trade_time1"},
+    "system2": {"alias": "time", "left": "time", "op": "==", "right": "trade_time2"},
+    "system3": {"alias": "time", "left": "time", "op": "==", "right": "trade_time3"},
+    "system4": {"alias": "time", "left": "time", "op": "==", "right": "trade_time4"},
+    "system5": {"alias": "time", "left": "time", "op": "==", "right": "trade_time5"},
+    "system6": {"alias": "time", "left": "time", "op": "==", "right": "trade_time6"},
+    "system7": {"alias": "ma1", "left": "close", "op": "<", "right": "ma1"},
+    "system8": {"alias": "ma2", "left": "close", "op": "<", "right": "ma2"},
+    "system9": {"alias": "ma3", "left": "close", "op": "<", "right": "ma3"},
+    "system10": {"alias": "ma4", "left": "close", "op": "<", "right": "ma4"}
+  },
+  "sell_system_op": "(system1 or system2 or system3 or system4 or system5 or system6) and system7 and system8 and system9 and system10"
+}

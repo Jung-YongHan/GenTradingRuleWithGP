@@ -2,7 +2,6 @@
 
 import hashlib
 import json
-import random
 
 from src.configs.gp_configs import MAX_TREE_SIZE
 from src.strategy.parser import parse_gp_tree_to_json
@@ -10,6 +9,10 @@ from src.strategy.validator import validate_and_clean_strategy
 
 # 전략 평가 결과를 저장하는 캐시
 _strategy_cache = {}
+
+# BT4 백테스트 설정 (main.py에서 설정)
+_bt4_config = None
+_bt4_adapter = None
 
 
 def get_strategy_hash(strategy_json):
@@ -36,6 +39,20 @@ def clear_cache():
     """캐시 초기화"""
     global _strategy_cache
     _strategy_cache.clear()
+
+
+def set_bt4_config(config):
+    """
+    BT4 백테스트 설정을 전역으로 설정
+    main.py에서 한 번만 호출하여 설정
+
+    Args:
+        config: bt4_config.py에서 로드한 설정 딕셔너리
+    """
+    global _bt4_config, _bt4_adapter
+    _bt4_config = config
+    # 설정이 변경되면 어댑터도 재생성
+    _bt4_adapter = None
 
 
 def eval_func(individual, condition_manager=None):
@@ -75,9 +92,29 @@ def eval_func(individual, condition_manager=None):
 
 def evaluate_with_trader(modified_json=None):
     """Trader 모듈을 사용하여 적합도를 평가하는 함수"""
+    global _bt4_config, _bt4_adapter
+
     try:
-        # TODO: 실제 Trader 모듈 연동
-        return random.uniform(10, 100)
+        # BT4 설정이 없으면 오류
+        if _bt4_config is None:
+            raise RuntimeError(
+                "BT4 설정이 초기화되지 않았습니다. "
+                "main.py에서 set_bt4_config()를 먼저 호출하세요."
+            )
+
+        # BT4 어댑터를 통한 평가
+        from src.adapters.bt4_adapter import BT4BacktestAdapter
+
+        # 싱글톤 패턴으로 어댑터 재사용 (초기화 비용 절감)
+        if _bt4_adapter is None:
+            _bt4_adapter = BT4BacktestAdapter(_bt4_config)
+
+        fitness = _bt4_adapter.evaluate_strategy(modified_json)
+        return fitness
+
     except Exception as e:
         print(f"Trader 평가 중 오류 발생: {e}")
+        import traceback
+
+        traceback.print_exc()
         return -1000.0

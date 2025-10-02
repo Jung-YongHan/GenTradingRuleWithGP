@@ -1,0 +1,91 @@
+{
+  "$id": "https://example.com/schemas/common_schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "type": "object",
+  "properties": {
+    "stgy_name": {
+      "type": "string"
+    },
+    "module_name": {
+      "type": "string"
+    },
+    "ga_exec": {
+      "type": "boolean"
+    },
+    "bt_start": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "bt_end": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "markets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "ga_markets": {
+      "type": "boolean"
+    },
+    "cdl_type": {
+      "type": "integer",
+      "enum": [1, 3, 5, 15, 30, 60, 240, 1440]
+    },
+    "init_balance": {
+      "type": "number"
+    },
+    "slippage": {
+      "type": "number",
+      "exclusiveMinimum": 0.0005,
+      "exclusiveMaximum": 0.005
+    },
+    "bt_times": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^([01]\\d|2[0-3]):59$"
+      }
+    },
+    "vola": {
+      "$ref": "strategy_schema.json#/definitions/vola"
+    },
+    "timeframe": {
+      "$ref": "strategy_schema.json#/definitions/timeframe"
+    },
+    "fixed": {
+      "$ref": "strategy_schema.json#/definitions/fixed"
+    },
+    "weighted": {
+      "$ref": "strategy_schema.json#/definitions/weighted"
+    },
+    "stop_loss": {
+      "$ref": "strategy_schema.json#/definitions/stop_loss"
+    },
+    "trailing_stop": {
+      "$ref": "strategy_schema.json#/definitions/trailing_stop"
+    },
+    "take_profit": {
+      "$ref": "strategy_schema.json#/definitions/take_profit"
+    },
+    "vars": {
+      "type": "object"
+    },
+    "buy_systems": {
+      "$ref": "systems_schema.json#/definitions/systems"
+    },
+    "buy_system_op": {
+      "type": "string"
+    },
+    "sell_systems": {
+      "$ref": "systems_schema.json#/definitions/systems"
+    },
+    "sell_system_op": {
+      "type": "string"
+    }
+  },
+  "required": ["stgy_name", "module_name", "ga_exec", "bt_start", "bt_end", "markets", "ga_markets", "cdl_type", "init_balance", "slippage", "bt_times", "vola", "timeframe", "fixed", "weighted", "stop_loss", "trailing_stop", "take_profit", "vars", "buy_systems", "buy_system_op", "sell_systems", "sell_system_op"]
+}

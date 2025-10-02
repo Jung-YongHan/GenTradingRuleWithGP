@@ -1,0 +1,10 @@
+{
+  "$id": "https://example.com/schemas/main_schema.json",
+  "type": "object",
+  "properties": {
+    "person": {
+      "$ref": "person_schema.json"
+    }
+  },
+  "required": ["person"]
+}

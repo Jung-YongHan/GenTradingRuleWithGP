@@ -1,0 +1,26 @@
+{
+  "stkim": {
+    "access_key": "sl7NbFdnCO8CZaxwpVRqC6L3XAW8jWbA91yGloW1",
+    "secrete_key": "2Qc0aAotIPb6xBApMwxgbTkmCdNs5xuBbQZsXuJx"
+  },
+  "sohyun": {
+    "access_key": "AI9R8xhSWx4zpPgUUTLt3bMKoAoGx70DDps6bleP",
+    "secrete_key": "BiZxxY4mBK5EbiCRiSgsWxYRbmDjYjxjkbxDdN0f"
+  },
+  "joongi": {
+    "access_key": "Q6jjMoRXr3niA79zQakM4E9WlZTeZ0mUaBRwWuYC",
+    "secrete_key": "764uN6dorVPp0nH4HtYHANe54e5lpCI0h4tKFufa"
+  },
+  "jkshin": {
+    "access_key": "l7xuekzUrQADTFLGUxydcnNje9dFvG1yX6896Sbo",
+    "secrete_key": "pm5oCySoP7NSkKxci8DFd9ZTpMrxvNbC4l1tlBmb"
+  },
+  "soonsig": {
+    "access_key": "ga7UiVFXbzE6WhZbJUdMRgz1Tu3C03nE4clFwggV",
+    "secrete_key": "Y2lzYha7vAUbd4B2oPtGaX3l23Vu1xzLSZMBDRq9"
+  },
+  "dyko": {
+    "access_key": "OBo3ElnBp2Px7uifL5pAbjwQF0ascAeAtd4xnFU5",
+    "secrete_key": "lRADTXRHCsfpoFaWjsqRqxWRRH640OAxmmJm3BAM"
+  }
+}

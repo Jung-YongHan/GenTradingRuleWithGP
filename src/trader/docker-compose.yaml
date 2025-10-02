@@ -1,0 +1,203 @@
+version: "3.1"
+
+services:
+  db2:
+    container_name: db2
+    image: postgres:16.1
+    restart: always
+    ports:
+      - "5433:5432"
+    volumes:
+      - /data/postgresql/:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: bulltrader
+      POSTGRES_PASSWORD: qnfxmfpdlej12!
+      POSTGRES_DB: bt4
+      TZ: "Asia/Seoul" # timezone 설정 부분
+
+  db:
+    container_name: db
+    image: postgres:16.1
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - /data/postgresql2/:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: bulltrader
+      POSTGRES_PASSWORD: qnfxmfpdlej12!
+      POSTGRES_DB: bt4_test
+      TZ: "Asia/Seoul" # timezone 설정 부분
+
+  postgres-adminer:
+    image: adminer
+    container_name: postgres-adminer
+    restart: always
+    ports:
+      - 8090:8080
+
+  redis:
+    image: redis:7.2.3
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: always
+    volumes:
+      - ~/redis:/data
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    volumes:
+      - "zookeeper_data:/bitnami"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    restart: always
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+      - "9093:9093"
+
+    volumes:
+      - "kafka_data:/bitnami"
+    environment:
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: LISTENER_BOB://kafka:29092,PLAINTEXT://:9092,PLAINTEXT_HOST://:9093
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_BOB://kafka:29092,PLAINTEXT://localhost:9092,PLAINTEXT_HOST://192.168.1.21:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_BOB:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_BOB
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    depends_on:
+      - zookeeper
+    restart: always
+
+  mongo:
+    image: mongo:5.0.6
+    container_name: mongo
+    ports:
+      - 27017:27017
+    restart: always
+    volumes:
+      - ~/mongodb:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: bulltrader
+      MONGO_INITDB_ROOT_PASSWORD: qnfxmfpdlej12!
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    restart: always
+    ports:
+      - 7407:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: bulltrader
+      ME_CONFIG_MONGODB_ADMINPASSWORD: qnfxmfpdlej12!
+      ME_CONFIG_BASICAUTH_USERNAME: bulltrader
+      ME_CONFIG_BASICAUTH_PASSWORD: qnfxmfpdlej12!@
+      ME_CONFIG_MONGODB_URL: mongodb://bulltrader:qnfxmfpdlej12!@mongo:27017/
+
+#  quote:
+#    image: localhost:5000/qrade-trader:4.1.5
+#    container_name: quote
+#    restart: always
+#    command: python ./bt4/exec/ExchangeQuoteDispatcherMain.py -quote_mode redis_kafka -kafka 192.168.1.173:9093 -redis 192.168.1.173:6379
+#    depends_on:
+#      - zookeeper
+#      - mongo
+#      - kafka
+#        #volumes:
+#        #- ./bt4/GlobalProperties.py:/app/bt4/GlobalProperties.py
+
+  quote-socket:
+    image: localhost:5000/qrade-trader:4.1.5
+    container_name: quote-socket
+    restart: always
+    command: python ./bt4/exec/WebsocketExQuoteDispatcherMain.py -quote_mode redis_kafka -kafka 192.168.1.173:9093 -redis 192.168.1.173:6379
+    depends_on:
+      - zookeeper
+      - mongo
+      - kafka
+      #volumes:
+      #- ./bt4/GlobalProperties.py:/app/bt4/GlobalProperties.py
+
+  qrade-web:
+    container_name: qrade-web
+    image: localhost:5000/qrade-web:0.2.3
+    restart: always
+    ports:
+      - "8096:8096"
+    command: python bt4/backend/app.py
+
+  qrade-vue:
+    container_name: qrade-vue
+    image: localhost:5000/qrade-vue:0.2.3
+    restart: always
+    ports:
+      - "9102:9102"
+
+  registry-ui:
+    image: joxit/docker-registry-ui:main
+    restart: always
+    ports:
+      - 5001:80
+    environment:
+      - SINGLE_REGISTRY=true
+      - REGISTRY_TITLE=Docker Registry UI
+      - DELETE_IMAGES=true
+      - SHOW_CONTENT_DIGEST=true
+      - NGINX_PROXY_PASS_URL=http://registry-server:5000
+      - SHOW_CATALOG_NB_TAGS=true
+      - CATALOG_MIN_BRANCHES=1
+      - CATALOG_MAX_BRANCHES=1
+      - TAGLIST_PAGE_SIZE=100
+      - REGISTRY_SECURED=false
+      - CATALOG_ELEMENTS_LIMIT=1000
+    container_name: registry-ui
+
+  registry-server:
+    image: registry:2.8.2
+    restart: always
+    ports:
+      - 5000:5000
+    environment:
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin: '["*"]'
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Methods: "[HEAD,GET,OPTIONS,DELETE]"
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Credentials: "[true]"
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Headers: "[Authorization,Accept,Cache-Control]"
+      REGISTRY_HTTP_HEADERS_Access-Control-Expose-Headers: "[Docker-Content-Digest]"
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+    volumes:
+      - /data/registry:/var/lib/registry
+    container_name: registry-server
+
+  nginx:
+    image: nginx:latest
+    restart: always
+    ports:
+      - "9080:80"
+    volumes:
+      # - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./bt4_json_schema/:/usr/share/nginx/html:ro
+    container_name: nginx
+
+  nginx2:
+    image: nginx:latest
+    restart: always
+    ports:
+      - "9081:80"
+    volumes:
+      # - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./dist/:/usr/share/nginx/html:ro
+    container_name: nginx2
+
+volumes:
+  zookeeper_data:
+    driver: local
+  kafka_data:
+    driver: local

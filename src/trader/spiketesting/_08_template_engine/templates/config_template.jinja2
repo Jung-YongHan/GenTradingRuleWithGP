@@ -1,0 +1,50 @@
+from bt3.Constants import AssetMgrType, CandleType, QItem
+from bt3.utils.misc_utils import calibrate_simul_env2
+
+
+class Config:
+    def __init__(self):
+        pass
+
+    def load_params(self, r, params):
+        params[r.OP.BT.CDL_TYPES_NEEDED] = [CandleType.DAYS, CandleType.DAYS_TF,
+                                            CandleType.HOUR, CandleType.MINUTES_1]
+
+        params[r.OP.BT.START] = '{{bt_start}}'
+        # params[r.OP.BT.START] = '2023-01-24T08:59:00'
+        params[r.OP.BT.END]   = '{{bt_end}}'
+
+        params[r.OP.MARKET] = ({% for market in markets %}'{{market -}}',{%endfor %})
+        params[r.OP.BT.CANDLE_TYPE] = {{cdl_type}}
+        params[r.OP.BT.TIME] = []
+        {# Volatility #}
+        {% if vola.support == True %}params[r.AM.AM_TYPE] =  {% if timeframe.support == True %} AssetMgrType.VOLATILITY_HDGE {% else %} AssetMgrType.VOLATILITY {% endif %}
+        params[r.AM.AM_VOL_TARGET] = {{ vola.vol_tgt }}
+        params[r.AM.AM_VOL_TAI] = 'vol5'
+        params[r.AM.AM_TIMEFRAMES] = [{% for tf in timeframe.timeframes %}'{{tf -}}',{% endfor %}]
+        {% endif %}
+        {# Fixed #}
+        {% if fixed.support == True %}params[r.AM.AM_TYPE] =  {% if fixed.hdge == True %} AssetMgrType.FIXED_HDGE {% else %} AssetMgrType.FIXED {% endif %}
+        params[r.AM.AM_FIXED_TRADE_RATIO] = {{fixed.trade_ratio}}
+        {% endif %}
+        #############################################
+        params[r.STGY.NAME] = '{{stgy_name}}'
+        params[r.STGY.MODULE] = '{{module_name}}'
+        params[r.RS.RS_FILE_NAME] = params[r.STGY.NAME]
+
+        {% if stop_loss.support == True %}params[r.STGY.STOP_LOSS] = [{{stop_loss.ratio}}] {% endif %}
+        {% if trailing_stop.support == True %}params[r.STGY.TRAILING_STOP] = [{{trailing_stop.ratio}}]{% endif %}
+        {% if take_profit.support == True %}params[r.STGY.TAKE_PROFIT] = [{{take_profit.ratio}}] {% endif %}
+
+        params[r.STGY.PARAMS] = {
+            {% if vola.support == True %}{% if timeframe.support == True %}'timeframes': [{% for tf in timeframe.timeframes %}'{{tf -}}',{% endfor %}],
+            'timegap': {{ timeframe.timegap }}, {% endif %} {% endif %}
+            {% for var in vars -%}"{{ var }}" : ["{{vars[var].func}}",[{% for param in vars[var].params -%}{{ param }},{% endfor %}],{{vars[var].cdl_type}}, [{% for src in vars[var].sources -%}{{ src }},{% endfor %}]],
+            {% endfor %}
+        }
+
+        {% if vola.support == True %}{% if timeframe.support == True %}calibrate_simul_env2(r, params){% endif %} {% endif %}
+
+
+
+

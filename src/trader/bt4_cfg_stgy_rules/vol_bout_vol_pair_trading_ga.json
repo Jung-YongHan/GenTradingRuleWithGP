@@ -1,0 +1,72 @@
+{
+  "stgy_name": "VolatilityBreakoutStrategy",
+  "module_name": "VolatilityBreakoutStrategy",
+  "pt_exec" : true,
+  "ga_exec" : true,
+  "ga_exec_mode" : "BASIC",
+  "ga_exec_obj" : "PROFIT",
+  "bt_start": "2018-10-01T08:59:00",
+  "bt_end": "2022-11-25T08:59:00",
+  "markets": ["KRW-BTC", "KRW-ETH", "KRW-XRP"],
+  "ga_markets" : false,
+  "cdl_type": 60,
+  "init_balance": 10000000,
+  "slippage" : 0.005,
+  "bt_times" : [],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.04,
+    "ga_vol_tgt" : [0.02, 0.04]
+  },
+  "timeframe":{
+    "support": false,
+    "timeframes": ["07:59", "08:59"],
+    "timegap": 1
+  },
+  "fixed": {
+    "support": false,
+    "hdge": false,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": false,
+    "ratio": -0.04
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.02
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "reserved_vars" : ["open_d1"],
+  "vars": {
+    "base_time" : "08:59",
+    "ga_base_time" : ["00:59", "01:59", "02:59", "03:59", "04:59", "05:59","06:59",
+                  "07:59", "08:59", "09:59", "10:59", "11:59", "12:59","13:59",
+                  "14:59", "15:59", "16:59", "17:59", "18:59", "19:59","20:59",
+                  "21:59", "22:59", "23:59"],
+    "sell_time" : "07:59",
+    "ga_sell_time" : ["00:59", "01:59", "02:59", "03:59", "04:59", "05:59","06:59",
+                  "07:59", "08:59", "09:59", "10:59", "11:59", "12:59","13:59",
+                  "14:59", "15:59", "16:59", "17:59", "18:59", "19:59","20:59",
+                  "21:59", "22:59", "23:59"],
+    "range": {"func": "range", "params": [1], "cdl_type": 1440, "sources": ["high","low"], "unary": true}
+  },
+  "buy_systems": {
+    "system1": {"alias": "k", "left": "close", "pt_left_market" : "KRW-BTC", "op": ">", "right": "open_d1 + range * 0.5","pt_right_market" :  "KRW-BTC", "pt_tgt_market" :  "KRW-ETH",
+        "ga_pt_left_markets":  ["KRW-BTC", "KRW-ETH", "KRW-XRP"],
+        "ga_pt_right_markets":  ["KRW-BTC", "KRW-ETH", "KRW-XRP"],
+        "ga_pt_tgt_markets":  ["KRW-BTC", "KRW-ETH", "KRW-XRP"]}
+  },
+  "buy_system_op": "system1",
+  "sell_systems": {
+    "system1": {"alias": "time", "left": "time", "op": "==", "right": "sell_time"}
+  },
+  "sell_system_op": "system1"
+}

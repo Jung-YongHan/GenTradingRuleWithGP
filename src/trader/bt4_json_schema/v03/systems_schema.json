@@ -1,0 +1,73 @@
+{
+  "$id": "http://ssel.asuscomm.com:9080/v1/systems_schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "definitions": {
+    "buy_sell_systems_pt_ga":
+    {
+      "type": "object",
+      "properties": {
+        "ga_pt_left_markets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 20
+        },
+        "ga_pt_right_markets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 20
+        },
+        "ga_pt_tgt_markets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 20
+        }
+      },
+      "required": ["ga_pt_left_markets", "ga_pt_right_markets", "ga_pt_tgt_markets"]
+    },
+    "systems": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "properties": {
+            "alias": {
+              "type": "string"
+            },
+            "left": {
+              "type": "string"
+            },
+            "pt_left_market": {
+              "type": "string"
+            },
+            "op": {
+              "type": "string"
+            },
+            "right": {
+              "type": "string"
+            },
+            "pt_right_market": {
+              "type": "string"
+            },
+            "pt_tgt_market": {
+              "type": "string"
+            },
+            "market": {
+              "type": "string"
+            }
+          },
+          "required": ["alias", "left", "op", "right"]
+        }
+      }
+    }
+  }
+}

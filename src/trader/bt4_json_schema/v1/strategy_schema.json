@@ -1,0 +1,186 @@
+{
+  "$id": "http://ssel.asuscomm.com:9080/v1/strategy_schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "definitions": {
+    "vola": {
+      "type": "object",
+      "properties": {
+        "support": {
+          "type": "boolean"
+        },
+        "vol_tgt": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 0.99
+        },
+        "ga_vol_tgt": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "enum": [0.01, 0.02, 0.03, 0.04, 0.05]
+          }
+        }
+      },
+      "required": ["support", "vol_tgt"]
+    },
+    "timeframe": {
+      "type": "object",
+      "properties": {
+        "support": {
+          "type": "boolean"
+        },
+        "timeframes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "timegap": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "ga_timeframes": {
+          "type": "boolean"
+        },
+        "ga_timegap": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems" : 2,
+          "maxItems" : 2
+        }
+      },
+      "required": ["support", "timeframes", "timegap"]
+    },
+    "fixed": {
+      "type": "object",
+      "properties": {
+        "support": {
+          "type": "boolean"
+        },
+        "hdge": {
+          "type": "boolean"
+        },
+        "trade_ratio": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1.0
+        },
+        "ga_trade_ratio": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum" : 0.1,
+            "maximum" : 1.0
+          },
+          "minItems" : 2,
+          "maxItems" : 2
+        }
+      },
+      "required": ["support", "hdge", "trade_ratio"]
+    },
+    "weighted": {
+      "type": "object",
+      "properties": {
+        "support": {
+          "type": "boolean"
+        },
+        "top_n": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum" : 0.1,
+            "maximum" : 1.0
+          }
+        },
+        "ga_top_n": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number",
+            "minimum" : 0.1,
+            "maximum" : 1.0
+            },
+            "minItems" : 2,
+            "maxItems" : 2
+          }
+        }
+      },
+      "required": ["support", "top_n"]
+    },
+    "stop_loss": {
+      "type": "object",
+      "properties": {
+        "support": {
+          "type": "boolean"
+        },
+        "ratio": {
+          "type": "number",
+          "minimum" : -0.5,
+          "maximum" : -0.001
+        },
+        "ga_ratio": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum" : -0.5,
+            "maximum" : -0.001
+          },
+          "minItems" : 2,
+          "maxItems" : 2
+        }
+      },
+      "required": ["support", "ratio"]
+    },
+    "trailing_stop": {
+      "type": "object",
+      "properties": {
+        "support": {
+          "type": "boolean"
+        },
+        "ratio": {
+          "type": "number",
+          "minimum" : -0.2,
+          "maximum" : -0.001
+        },
+        "ga_ratio": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum" : -0.5,
+            "maximum" : -0.001
+          },
+          "minItems" : 2,
+          "maxItems" : 2
+        }
+      },
+      "required": ["support", "ratio"]
+    },
+    "take_profit": {
+      "type": "object",
+      "properties": {
+        "support": {
+          "type": "boolean"
+        },
+        "ratio": {
+          "type": "number",
+            "minimum" : 0.01
+        },
+        "ga_ratio": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum" : 0.01
+          },
+          "minItems" : 2,
+          "maxItems" : 2
+        }
+      },
+      "required": ["support", "ratio"]
+    }
+  }
+}

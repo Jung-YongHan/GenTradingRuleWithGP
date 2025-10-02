@@ -1,0 +1,58 @@
+{
+  "stgy_name": "WinningSession_Day",
+  "module_name": "WinningSessionStrategy",
+  "bt_start": "2018-10-01T08:59:00",
+  "bt_end": "2023-12-31T08:59:00",
+  "markets": ["KRW-ETH"],
+  "cdl_type": 60,
+ "init_balance": 10000000,
+  "slippage" : 0.0008,
+  "bt_times" : ["08:59", "13:59", "20:59"],
+  "vola": {
+    "support": true,
+    "vol_tgt": 0.0383862786785994
+  },
+  "timeframe":{
+    "support": false,
+    "timeframes": ["07:59", "08:59"],
+    "timegap": 1
+  },
+  "fixed": {
+    "support": false,
+    "hdge": false,
+    "trade_ratio": 0.4
+  },
+  "weighted": {
+    "support": false,
+    "top_n": [0.6,0.3,0.1]
+  },
+  "stop_loss": {
+    "support": true,
+    "ratio": -0.030115134150950074
+  },
+  "trailing_stop": {
+    "support": false,
+    "ratio": -0.10
+  },
+  "take_profit": {
+    "support": false,
+    "ratio": 0.07
+  },
+  "vars": {
+    "base_time" : "13:59",
+    "sell_time" : "20:59",
+    "bbands": {"func": "bbands", "params": [100, 3.388575337999478, 2.146048750784143, 1], "cdl_type": 1440, "sources": ["open"], "unary": false},
+    "up_breakout":  {"func": "up_breakout_vals", "params": [16], "cdl_type": 1440,"sources": ["close", "bbands[2]"], "unary": true},
+    "down_breakout":{"func": "down_breakout_vals", "params": [44], "cdl_type": 1440,"sources": ["close", "bbands[0]"], "unary": true}
+  },
+  "buy_systems": {
+    "system1": {"alias": "time", "left": "time", "op": "==", "right": "base_time"},
+    "system2": {"alias": "up_breakout", "left": "up_breakout", "op": "==", "right": "True"}
+  },
+  "buy_system_op": "system1 and system2",
+  "sell_systems": {
+    "system1": {"alias": "time", "left": "time", "op": "==", "right": "sell_time"},
+    "system2": {"alias": "down_breakout", "left": "down_breakout", "op": "==", "right": "True"}
+  },
+  "sell_system_op": "system1 and system2"
+}

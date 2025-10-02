@@ -1,0 +1,75 @@
+from bt4.Constants import CandleType, AssetMgrType, QItem, ExType
+from bt4.utils.misc_utils import calibrate_simul_env2
+
+class Config:
+    def __init__(self):
+        pass
+
+    def load_params(self, r, params):
+        params[r.OP.BT.CDL_TYPES_NEEDED] = [CandleType.DAYS, CandleType.DAYS_TF, CandleType.HOUR4,
+                                            CandleType.HOUR,  CandleType.MINUTES_30,  CandleType.MINUTES_15,
+                                            CandleType.MINUTES_5, CandleType.MINUTES_3, CandleType.MINUTES_1]
+
+        params[r.OP.BT.START] = "{{bt_start}}"
+        params[r.OP.BT.END]   = "{{bt_end}}"
+
+        params[r.EX.EX_DUMMY_INITIAL_RATIO] = {{init_balance}}
+        params[r.EX.EX_DUMMY_FEE_SLIPPAGE] = {{slippage}}
+
+        params[r.OP.MARKET] = ({% for market in markets %}"{{market -}}",{%endfor %})
+        params[r.OP.BT.CANDLE_TYPE] = CandleType({{cdl_type}})
+        params[r.OP.BT.TIME] = [{% for btt in bt_times %}"{{btt -}}",{% endfor %}]
+        {# Volatility #}
+        {% if vola.support == True %}params[r.AM.AM_TYPE] =  {% if timeframe.support == True %} AssetMgrType.VOLATILITY_HDGE {% else %} AssetMgrType.VOLATILITY {% endif %}
+        params[r.AM.AM_VOL_TARGET] = {{ vola.vol_tgt }}
+        params[r.AM.AM_VOL_TAI] = "vol5"
+        params[r.AM.AM_TIMEFRAMES] = [{% for tf in timeframe.timeframes %}"{{tf -}}",{% endfor %}]
+        {% endif %}
+        {# Fixed #}
+        {% if fixed.support == True %}params[r.AM.AM_TYPE] =  {% if fixed.hdge == True %} AssetMgrType.FIXED_HDGE {% else %} AssetMgrType.FIXED {% endif %}
+        params[r.AM.AM_FIXED_TRADE_RATIO] = {{fixed.trade_ratio}}
+        {% if fixed.hdge == True %}params[r.AM.AM_TIMEFRAMES] = [{% for tf in timeframe.timeframes %}"{{tf -}}",{% endfor %}]{% endif %}
+        {% endif %}
+        {% if weighted.support == True %}params[r.AM.AM_TYPE] = AssetMgrType.WEIGHTED
+        params[r.AM.AM_WGHT_TOP_N] = {{weighted.top_n}}
+        {% endif %}
+        #############################################
+        params[r.STGY.NAME] = "{{stgy_name}}"
+        params[r.STGY.MODULE] = "{{module_name}}"
+        params[r.RS.RS_FILE_NAME] = params[r.STGY.NAME]
+
+        {% if stop_loss.support == True %}params[r.STGY.STOP_LOSS] = [{{stop_loss.ratio}}] {% endif %}
+        {% if trailing_stop.support == True %}params[r.STGY.TRAILING_STOP] = [{{trailing_stop.ratio}}]{% endif %}
+        {% if take_profit.support == True %}params[r.STGY.TAKE_PROFIT] = [{{take_profit.ratio}}] {% endif %}
+
+        params[r.STGY.PARAMS] = {
+            "candle_type": CandleType({{cdl_type}}),
+            {% if timeframe.support == True %}"timeframes": [{% for tf in timeframe.timeframes %}"{{tf -}}",{% endfor %}],
+            "timegap": {{ timeframe.timegap }}, {% endif %}
+            {% for var in vars -%}{% if not var.startswith("ga_") %}"{{ var }}" : {% if vars[var] is mapping %} ["{{vars[var].func}}",[{% for param in vars[var].params -%}{{ param }},{% endfor %}],CandleType({{vars[var].cdl_type}}), [{% for src in vars[var].sources -%}"{{ src }}",{% endfor %}]], {% else %} "{{ vars[var] }}", {% endif %}{%  endif %}
+            {% endfor %}
+
+{#            {% if pt_exec is defined and pt_exec == True %} {#### for Pair Trading ####}
+            {% for bsys in buy_systems -%}
+                {% if buy_systems[bsys].left != "time" %}
+                    {% if pt_exec is defined and pt_exec == True %} {#### for Pair Trading ####}
+            "buy_{{ bsys }}_left_market" : "{{buy_systems[bsys].pt_left_market}}",
+            "buy_{{ bsys }}_right_market" : "{{buy_systems[bsys].pt_right_market}}",
+            "buy_{{ bsys }}_tgt_market" : "{{buy_systems[bsys].pt_tgt_market}}",
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% for ssys in sell_systems -%}
+                {% if sell_systems[ssys].left != "time" %}
+                    {% if pt_exec is defined and pt_exec == True %} {#### for Pair Trading ####}
+            "sell_{{ ssys }}_left_market" : "{{sell_systems[ssys].pt_left_market}}",
+            "sell_{{ ssys }}_right_market" : "{{sell_systems[ssys].pt_right_market}}",
+            "sell_{{ ssys }}_tgt_market" : "{{sell_systems[ssys].pt_tgt_market}}",
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+        }
+
+        {% if vola.support == True %}{% if timeframe.support == True %}calibrate_simul_env2(r, params){% endif %} {% endif %}

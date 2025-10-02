@@ -1,0 +1,399 @@
+from bt4.Constants import CandleType
+from bt4.utils.misc_utils import rearrange_market_tais
+from bt4.utils.tai_utils import get_unary_tai, get_nary_tai
+from bt4.strategy.Strategy import AbstractHedgingStrategy
+from bt4.core.gen_support import extract_local_variables
+from bt4.utils.python_utils import is_the_time2
+from bt4.strategy.bulk_hedging_strategies import AbstractBulkHedgingStrategy
+from bt4.utils.python_utils import flatten
+from bt4.core.gen_support import extract_reserved_vars, extract_reserved_vars_from_dfs, call_func, convert_primitive, extract_reserved_var_all_mkts
+import talib
+import bt4.quote.CustomTAIndicators as ctai
+from bt4.utils.tai_utils import get_last_series_val_of_nary_tais
+import pandas as pd
+
+{#class {{ stgy_name }}(AbstractHedgingStrategy):#}
+class {{ stgy_name }}(AbstractBulkHedgingStrategy):
+    def __init__(self, ):
+        super({{ stgy_name }}, self).__init__()
+
+    def load_tai_params(self, params):
+        {# self.ma1 = params['ma1'] #}
+        {% for var in vars -%}{% if not var.startswith("ga_") %}self.{{ var }} = params["{{ var }}"]{% endif %}
+        {% endfor %}
+
+        {% if pt_exec is defined and pt_exec == True %} {#### for Pair Trading ####}
+        {% for bsys in buy_systems -%}
+            {% if buy_systems[bsys].left != "time" %}
+        self.buy_{{ bsys }}_left_market = params["buy_{{ bsys }}_left_market"]
+        self.buy_{{ bsys }}_right_market = params["buy_{{ bsys }}_right_market"]
+        self.buy_{{ bsys }}_tgt_market = params["buy_{{ bsys }}_tgt_market"]
+            {% endif %}
+        {% endfor %}
+
+        {% for ssys in sell_systems -%}
+            {% if sell_systems[ssys].left != "time" %}
+        self.sell_{{ ssys }}_left_market = params["sell_{{ ssys }}_left_market"]
+        self.sell_{{ ssys }}_right_market = params["sell_{{ ssys }}_right_market"]
+        self.sell_{{ ssys }}_tgt_market = params["sell_{{ ssys }}_tgt_market"]
+            {% endif %}
+        {% endfor %}
+        {% endif %}
+
+    def __isBuySignal__(self, market_tai, tmgr, market, tick, time_dt, tf_hour):
+        close = tick.close
+        open = tick.open
+        high = tick.high
+        low = tick.low
+        volume = tick.volume
+
+        {% if len(reserved_vars) > 0 %}
+        reserved_vars = [{% for rvars in reserved_vars -%}"{{ rvars }}"{% if not loop.last %}, {% endif %} {% endfor %}]
+        {% for rvars in reserved_vars -%}{{ rvars }}{% if not loop.last %}, {% endif %} {% endfor %} = extract_reserved_vars(self.ex_type, market, tmgr, reserved_vars, tf_hour)
+        {% endif %}
+
+        desc = ""
+        {# ma1 = market_tai[market]['ma1'] #}
+        {% for var in vars -%}{% if not var.startswith("ga_") %}{% if vars[var] is mapping %}{{ var }} = market_tai[market]["{{ var }}"]{% endif %}{% endif %}
+        {% endfor %}
+
+        {# ################### system definition ################### #}
+        {% if pt_exec is defined and pt_exec == True %}
+        {# ############ pair trading ############## #}
+        {% for bsys in buy_systems -%}
+        {{ bsys }}_tgt_market = self.buy_{{ bsys }}_tgt_market
+        {{ bsys }} = False
+        {% if buy_systems[bsys].left != "time" %}
+        if {{ bsys }}_tgt_market == market:
+        {% else %}
+        if True:
+        {% endif %}
+
+            {% if buy_systems[bsys].left != "time" %}
+            left_market = self.buy_{{ bsys }}_left_market
+                {% if is_ohlcv(buy_systems[bsys].left) %}
+            quote = tmgr.get_quote()
+            market_ticks = quote.get_market_ticks(self.ex_type)
+            {{ bsys }}_left = market_ticks[f"{left_market}"].{{buy_systems[bsys].left}}
+                 {% elif is_reserved_vars(buy_systems[bsys].left) %}
+                 {% else %}
+            {{ bsys }}_left = market_tai[f"{left_market}"]["{{ buy_systems[bsys].left }}"]
+                 {% endif %}
+
+            right_market = self.buy_{{ bsys }}_right_market
+            {{ bsys }}_right = {% set tokens = parse_exp(buy_systems[bsys].right) %} {% if len(tokens) > 1 %} ( {% for token in tokens -%} {% if is_col_name(token) %} market_tai[f"{right_market}"]["{{token}}"] {% else %} {{token}} {% endif %} {% endfor %} ) {% else %}  {% if is_col_name(buy_systems[bsys].right) %} market_tai[f"{right_market}"]["{{ buy_systems[bsys].right }}"] {% else %} {{ buy_systems[bsys].right }} {% endif %} {% endif %}
+            {% else %}
+                {# Time Handling for Pair Trading #}
+            {% endif %}
+
+
+            {% if buy_systems[bsys].left != "time" %}
+            {{ bsys }} = {{ bsys }}_left {{ buy_systems[bsys].op }} {{ bsys }}_right
+            {% else %}
+            {{ bsys }} = is_the_time2(time_dt, self.{{ buy_systems[bsys].right}})
+            {% endif %}
+
+            desc = desc + f"\r\n *[{{ bsys }}/{{ buy_systems[bsys].tgt_market }}] { {{ bsys }} }::{% if buy_systems[bsys].left != "time" %}{{ buy_systems[bsys].left }}({ {{ bsys }}_left  }/{ left_market }) {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }}({ {{ bsys }}_right }/{ right_market })" {% else %}{{ buy_systems[bsys].left }}({ {{ buy_systems[bsys].left }}_dt }) {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }}({ self.{{ buy_systems[bsys].right }} })" {% endif %}
+        else:
+            {{ bsys }} = False
+        {% endfor %}
+        {% else %}
+        {# ############ general trading ############ #}
+        {% for bsys in buy_systems -%}
+        {% if buy_systems[bsys].market is defined %}
+        {{ bsys }} = False
+        if market == "{{ buy_systems[bsys].market }}":
+            {{ bsys }} = {% if buy_systems[bsys].left != "time" %} {{ buy_systems[bsys].left }} {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }} {% else %} is_the_time2(time_dt, self.{{ buy_systems[bsys].right}})  {% endif %}
+        {% else %}
+        {{ bsys }} = {% if buy_systems[bsys].left != "time" %} {{ buy_systems[bsys].left }} {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }} {% else %} is_the_time2(time_dt, self.{{ buy_systems[bsys].right}})  {% endif %}
+        {% endif %}
+        {% endfor %}
+
+        {% for bsys in buy_systems -%}
+        desc = desc + f"\r\n *[{{ buy_systems[bsys].alias }}] = { {{ bsys }} }::{% if buy_systems[bsys].left != "time" %}{{ buy_systems[bsys].left }}({ {{ buy_systems[bsys].left }} }) {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }}({ {{ buy_systems[bsys].right }} })" {% else %}{{ buy_systems[bsys].left }}({ {{ buy_systems[bsys].left }}_dt }) {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }}({ self.{{ buy_systems[bsys].right }} })" {% endif %}
+        {% if buy_systems[bsys].market is defined %}
+        desc = desc + f"_market ({market == '{{ buy_systems[bsys].market}}' }) : market({market}) == '{{ buy_systems[bsys].market}}'"
+        {% endif %}
+        {% endfor %}
+
+{#        {% for bsys in buy_systems -%}{{ bsys }} = {% if buy_systems[bsys].left != "time" %} {{ buy_systems[bsys].left }} {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }} {% else %} is_the_time2(time_dt, self.{{ buy_systems[bsys].right}})  {% endif %}#}
+{#        {% endfor %}#}
+{#        {% for bsys in buy_systems -%}desc = desc + f"\r\n *[{{ buy_systems[bsys].alias }}] = { {{ bsys }} }::{% if buy_systems[bsys].left != "time" %}{{ buy_systems[bsys].left }}({ {{ buy_systems[bsys].left }} }) {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }}({ {{ buy_systems[bsys].right }} })" {% else %}{{ buy_systems[bsys].left }}({ {{ buy_systems[bsys].left }}_dt }) {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }}({ self.{{ buy_systems[bsys].right }} })" {% endif %}#}
+{#        {% endfor %}#}
+
+        {% endif %}
+
+        {# ################### system operation ################### #}
+        signal = False
+        {# system1 and system2 and system3 and system4 #}
+        if {{ buy_system_op }} :
+            signal = True
+
+        return signal, desc
+
+    def __isSellSignal__(self, market_tai, tmgr, market, tick, time_dt, tf_hour) :
+        close = tick.close
+        open = tick.open
+        high = tick.high
+        low = tick.low
+        volume = tick.volume
+
+        {% if len(reserved_vars) > 0 %}
+        reserved_vars = [{% for rvars in reserved_vars -%}"{{ rvars }}"{% if not loop.last %}, {% endif %} {% endfor %}]
+        {% for rvars in reserved_vars -%}{{ rvars }}{% if not loop.last %}, {% endif %} {% endfor %} = extract_reserved_vars(self.ex_type, market, tmgr, reserved_vars, tf_hour)
+        {% endif %}
+
+        desc = ""
+        {# ma1 = market_tai[market]['ma1'] #}
+        {% for var in vars -%}{% if not var.startswith("ga_") %}{% if vars[var] is mapping %}{{ var }} = market_tai[market]["{{ var }}"]{% endif %}{% endif %}
+        {% endfor %}
+
+        {# ################### system definition ################### #}
+        {% if pt_exec is defined and pt_exec == True %}
+        {# ############ pair trading ############## #}
+        {% for ssys in sell_systems -%}
+        {{ ssys }}_tgt_market = self.sell_{{ ssys }}_tgt_market
+        {{ ssys }} = False
+
+        {% if sell_systems[ssys].left != "time" %}
+        if {{ ssys }}_tgt_market == market:
+        {% else %}
+        if True:
+        {% endif %}
+            {% if sell_systems[ssys].left != "time" %}
+            left_market = self.sell_{{ ssys }}_left_market
+                {% if is_ohlcv(sell_systems[ssys].left) %}
+            quote = tmgr.get_quote()
+            market_ticks = quote.get_market_ticks(self.ex_type)
+            {{ ssys }}_left = market_ticks[f"{left_market}"].{{sell_systems[ssys].left}}
+                 {% elif is_reserved_vars(sell_systems[ssys].left) %}
+                 {% else %}
+            {{ ssys }}_left = market_tai[f"{left_market}"]["{{ sell_systems[ssys].left }}"]
+                 {% endif %}
+
+            right_market = self.sell_{{ ssys }}_right_market
+            {{ ssys }}_right = {% set tokens = parse_exp(sell_systems[ssys].right) %} {% if len(tokens) > 1 %} ( {% for token in tokens -%} {% if is_col_name(token) %} market_tai[f"{right_market}"]["{{token}}"] {% else %} {{token}} {% endif %} {% endfor %} ) {% else %} {% if is_col_name(sell_systems[ssys].right) %} market_tai[f"{right_market}"]["{{ sell_systems[ssys].right }}"] {% else %} {{ sell_systems[ssys].right }} {% endif %} {% endif %}
+            {% endif %}
+
+            {% if sell_systems[ssys].left != "time" %}
+            {{ ssys }} = {{ ssys }}_left {{ sell_systems[ssys].op }} {{ ssys }}_right
+            {% else %}
+            {{ ssys }} = is_the_time2(time_dt, self.{{ sell_systems[ssys].right}})
+            {% endif %}
+
+            desc = desc + f"\r\n *[{{ ssys }}/{{ sell_systems[ssys].tgt_market }}] { {{ ssys }} }::{% if sell_systems[ssys].left != "time" %}{{ sell_systems[ssys].left }}({ {{ ssys }}_left }/{ left_market }) {{ sell_systems[ssys].op }} {{ sell_systems[ssys].right }}({ {{ ssys }}_right }/{ right_market })" {% else %}{{ sell_systems[ssys].left }}({ {{ sell_systems[ssys].left }}_dt }) {{ sell_systems[ssys].op }} {{ sell_systems[ssys].right }}({ self.{{ sell_systems[ssys].right }} })" {% endif %}
+        else:
+            {{ ssys }} = False
+        {% endfor %}
+
+        {% else %}
+        {# ############ general trading ############ #}
+        {% for ssys in sell_systems -%}
+        {% if sell_systems[ssys].market is defined %}
+        {{ ssys }} = False
+        if market == "{{ sell_systems[ssys].market }}":
+            {{ ssys }} = {% if sell_systems[ssys].left != "time" %} {{ sell_systems[ssys].left }} {{ sell_systems[ssys].op }} {{ sell_systems[ssys].right }} {% else %} is_the_time2(time_dt, self.{{ sell_systems[ssys].right}})  {% endif %}
+        {% else %}
+        {{ ssys }} = {% if sell_systems[ssys].left != "time" %} {{ sell_systems[ssys].left }} {{ sell_systems[ssys].op }} {{ sell_systems[ssys].right }} {% else %} is_the_time2(time_dt, self.{{ sell_systems[ssys].right}})  {% endif %}
+        {% endif %}
+        {% endfor %}
+
+        {% for ssys in sell_systems -%}
+        desc = desc + f"\r\n *[{{ sell_systems[ssys].alias }}] = { {{ ssys }} }::{% if sell_systems[ssys].left != "time" %} {{ sell_systems[ssys].left }}({ {{ sell_systems[ssys].left }} }) {{ sell_systems[ssys].op }} {{ sell_systems[ssys].right }}({ {{ sell_systems[ssys].right }} })"{% else %}{{ sell_systems[ssys].left }}({ {{ sell_systems[ssys].left }}_dt }) {{ sell_systems[ssys].op }} {{ sell_systems[ssys].right }}({ self.{{ sell_systems[ssys].right }} })" {% endif %}
+        {% if sell_systems[ssys].market is defined %}
+        desc = desc + f"_market ({market == '{{ sell_systems[ssys].market}}' }) : market({market}) == '{{ sell_systems[ssys].market}}'"
+        {% endif %}
+        {% endfor %}
+
+        {% endif %}
+
+        {# ################### system operation ################### #}
+        signal = False
+        {% if sell_system_op is defined %}
+        if {{ sell_system_op }} :
+            signal = True
+        {% endif %}
+        return signal, desc
+
+    def extract_tai(self, tmgr, timeframe_hour):
+        quote = tmgr.get_quote()
+        markets = quote.get_markets(self.ex_type)
+
+        ma_key = f'DAYS_{timeframe_hour}'
+        {# self.ma1[2] = CandleType[ma_key] #}
+        {% for var in vars -%}{% if not var.startswith("ga_") %}{% if vars[var] is mapping and vars[var].cdl_type == 1474 %}self.{{ var }}[2] = CandleType[ma_key]{% endif %}{% endif %}
+        {% endfor %}
+
+        market_tai = {}
+        {# rearrange_market_tais(markets, market_tai, "ma1", get_unary_tai(tmgr, self.ma1)) #}
+        {% for var in vars -%}{% if vars[var] is mapping %}rearrange_market_tais(markets, market_tai, "{{ var }}", {% if vars[var].unary == True %} get_unary_tai(tmgr, self.{{ var }}, "{{ var }}", market_tai, True) {% else %} get_nary_tai(tmgr, self.{{ var }}, "{{ var }}", market_tai, True) {% endif %}){% endif %}
+        {% endfor %}
+
+        {% if len(reserved_vars) > 0 %}
+        reserved_vars = [{% for rvars in reserved_vars -%}"{{ rvars }}"{% if not loop.last %}, {% endif %} {% endfor %}]
+        extract_reserved_var_all_mkts(self.ex_type, tmgr, reserved_vars, market_tai, timeframe_hour)
+        {% endif %}
+
+        return market_tai
+
+    def set_time_variables(self):
+        bt_cdl_type = self.context.backtestor.candle_type
+        {% for var in vars -%}{% if not var.startswith("ga_") %}{% if vars[var] is not mapping %}{% if "time" in var %}{{ var }} = self.context.ctx_params["params"]["{{ var }}"]
+        self.{{var}}_hour, self.{{var}}_min = super({{ stgy_name }}, self).__get_cdl_time_of_usr_time__({{ var }}, bt_cdl_type)
+        {% endif %}{% endif %}{% endif %}{% endfor %}
+
+    def get_tai_names(self):
+        tai_names = [{% for var in vars -%}{% if not var.startswith("ga_") %}{% if vars[var] is mapping %}{% if vars[var].unary %}"{{ var }}"{% else %} {{ get_nary_vars(vars[var].func.upper(),var) }}{% endif %},{% endif %}{% endif %} {% endfor %}]
+        reserved_vars = [{% for rvars in reserved_vars -%}"{{ rvars }}"{% if not loop.last %}, {% endif %} {% endfor %}]
+        tai_names.append(reserved_vars)
+        return list(flatten(tai_names))
+
+    def calculate_tai(self, var_mkt_cdl_dfs, tf_adj_cdl, time_pts):
+        tf_df = var_mkt_cdl_dfs[tf_adj_cdl]
+
+        reserved_vars = [{% for rvars in reserved_vars -%}"{{ rvars }}"{% if not loop.last %}, {% endif %} {% endfor %}]
+        reserved_var_values = extract_reserved_vars_from_dfs(var_mkt_cdl_dfs, reserved_vars, tf_adj_cdl)
+
+        {% for var in vars -%}{% if not var.startswith("ga_") %}{% if vars[var] is mapping %}if self.{{ var }}[2] == CandleType.DAYS_TF:
+            self.{{ var }}[2] = tf_adj_cdl{% endif %}{% endif %}
+        {% endfor %}
+
+        {% for var in vars -%}{% if not var.startswith("ga_") %}{% if vars[var] is mapping %}{% for local_var in get_local_vars_of_func(vars[var].func, var, True) -%}{{local_var}}{% if not loop.last %},{% endif %}{% endfor %} = call_func("{{ vars[var].func }}", var_mkt_cdl_dfs, {% if vars[var].cdl_type == 1474 %}tf_adj_cdl {% else %}self.{{ var }}[2].value{% endif %}, self.{{ var }}[3], convert_primitive(self.{{ var }}[1]), locals()) {% endif %}{% endif %}
+        {% endfor %}
+
+        ret_list = [{% for var in vars -%}{% if not var.startswith("ga_") %}{% if vars[var] is mapping %}{% for local_var in get_local_vars_of_func(vars[var].func, var) -%} {{ local_var }}, {% endfor %}{% endif %}{% endif %}{% endfor %}]
+        ret_list.append(reserved_var_values)
+        return flatten(ret_list)
+
+    def get_buy_system(self, market_df, market):
+        {# ################### system definition ################### #}
+
+        buy_mkt_df = super({{ stgy_name }}, self).__get_buy_market_df__(market_df, market)
+
+        {% if pt_exec is defined and pt_exec == True %}
+        {# ######## pair trading ######## #}
+        {% for bsys in buy_systems -%}
+        market_df[f"{market}_buy_{{ bsys }}"] = pd.Series(data=[False]*len(market_df.index), index = market_df.index)
+        market_df[f"{market}_buy_{{ bsys }}_desc"] = ""
+        {% endfor %}
+
+        {% for bsys in buy_systems -%}
+        {% if buy_systems[bsys].left != "time" %}
+        {{ bsys }}_tgt_market = self.buy_{{ bsys }}_tgt_market
+        {% else %}
+        {{ bsys }}_tgt_market = market
+        {% endif %}
+
+        {% if buy_systems[bsys].left != "time" %}
+        if {{ bsys }}_tgt_market == market:
+        {% else %}
+        if True:
+        {% endif %}
+            left_market = self.buy_{{ bsys }}_left_market
+            right_market = self.buy_{{ bsys }}_right_market
+
+            market_df[f"{market}_buy_{{ bsys }}"] = {% if buy_systems[bsys].left != "time" %}  buy_mkt_df[f"{left_market}_{{ buy_systems[bsys].left }}"]  {{ buy_systems[bsys].op }} {% set tokens = parse_exp(buy_systems[bsys].right) %} {% if len(tokens) > 1 %} ( {% for token in tokens -%} {% if is_col_name(token) %} buy_mkt_df[f"{right_market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ) {% else %} {% if is_col_name(buy_systems[bsys].right) %} buy_mkt_df[f"{right_market}_{{ buy_systems[bsys].right }}"] {% else %} {{ buy_systems[bsys].right }} {% endif %} {% endif %}  {% else %} ((buy_mkt_df.index.hour == self.{{ buy_systems[bsys].right }}_hour) & (buy_mkt_df.index.minute == self.{{ buy_systems[bsys].right }}_min))  {% endif %}
+            market_df[f"{market}_buy_{{ bsys }}_desc"]  = {% if buy_systems[bsys].left != "time" %}  "{{ buy_systems[bsys].left }}(" + buy_mkt_df[f"{left_market}_{{ buy_systems[bsys].left }}"].astype(str) + "/{left_market}) {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }}(" + {% set tokens = parse_exp(buy_systems[bsys].right) %} {% if len(tokens) > 1 %} pd.Series( {% for token in tokens -%} {% if is_col_name(token) %} buy_mkt_df[f"{right_market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ).astype(str) {% else %}  {% if is_col_name(buy_systems[bsys].right) %} buy_mkt_df[f"{right_market}_{{ buy_systems[bsys].right }}"].astype(str) {% else %} str({{ buy_systems[bsys].right }}) {% endif %}  {% endif %} + "/{right_market})" {% else %} "hour(" + buy_mkt_df.index.hour.astype(str) + ") == {{ buy_systems[bsys].right }}_hour (" + str(self.{{ buy_systems[bsys].right }}_hour) + ") & minute (" + buy_mkt_df.index.minute.astype(str) + ") == {{ buy_systems[bsys].right }}_min(" + str(self.{{ buy_systems[bsys].right }}_min)+")" {% endif %}
+        {% endfor %}
+
+        {% else %}
+        {# ######## general trading ####### #}
+
+        {% for bsys in buy_systems -%}
+            {% if buy_systems[bsys].left != "time" %} {# If Not TIME #}
+                {% if buy_systems[bsys].market is defined %}
+        market_df[f"{market}_buy_{{ bsys }}"] = False
+        if market == "{{ buy_systems[bsys].market }}":
+            # market_df.loc[buy_mkt_df[f"{market}_{{ buy_systems[bsys].left }}"]  {{ buy_systems[bsys].op }} {% set tokens = parse_exp(buy_systems[bsys].right) %} {% if len(tokens) > 1 %} ( {% for token in tokens -%} {% if is_col_name(token) %} buy_mkt_df[f"{market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ) {% else %} {% if is_col_name(buy_systems[bsys].right) %} buy_mkt_df[f"{market}_{{ buy_systems[bsys].right }}"] {% else %} {{ buy_systems[bsys].right }} {% endif %} {% endif %},f"{market}_buy_{{ bsys }}"] = True
+            market_df[f"{market}_buy_{{ bsys }}"] = buy_mkt_df[f"{market}_{{ buy_systems[bsys].left }}"]  {{ buy_systems[bsys].op }} {% set tokens = parse_exp(buy_systems[bsys].right) %} {% if len(tokens) > 1 %} ( {% for token in tokens -%} {% if is_col_name(token) %} buy_mkt_df[f"{market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ) {% else %} {% if is_col_name(buy_systems[bsys].right) %} buy_mkt_df[f"{market}_{{ buy_systems[bsys].right }}"] {% else %} {{ buy_systems[bsys].right }} {% endif %} {% endif %}
+                {% else %}
+        market_df[f"{market}_buy_{{ bsys }}"]  =  buy_mkt_df[f"{market}_{{ buy_systems[bsys].left }}"]  {{ buy_systems[bsys].op }} {% set tokens = parse_exp(buy_systems[bsys].right) %} {% if len(tokens) > 1 %} ( {% for token in tokens -%} {% if is_col_name(token) %} buy_mkt_df[f"{market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ) {% else %} {% if is_col_name(buy_systems[bsys].right) %} buy_mkt_df[f"{market}_{{ buy_systems[bsys].right }}"] {% else %} {{ buy_systems[bsys].right }} {% endif %} {% endif %}
+                {% endif %}
+        market_df[f"{market}_buy_{{ bsys }}_desc"] = "{{ buy_systems[bsys].left }}(" + buy_mkt_df[f"{market}_{{ buy_systems[bsys].left }}"].astype(str) + ") {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }}(" + {% set tokens = parse_exp(buy_systems[bsys].right) %} {% if len(tokens) > 1 %} pd.Series( {% for token in tokens -%} {% if is_col_name(token) %} buy_mkt_df[f"{market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ).astype(str) {% else %}  {% if is_col_name(buy_systems[bsys].right) %} buy_mkt_df[f"{market}_{{ buy_systems[bsys].right }}"].astype(str) {% else %} str({{ buy_systems[bsys].right }}) {% endif %}  {% endif %} + ")" {% if buy_systems[bsys].market is defined %} + f"_market({market}) == '{{ buy_systems[bsys].market }}'" {% endif %}
+        {% else %}                                   {# If TIME #}
+        market_df[f"{market}_buy_{{ bsys }}"]  =  ((buy_mkt_df.index.hour == self.{{ buy_systems[bsys].right }}_hour) & (buy_mkt_df.index.minute == self.{{ buy_systems[bsys].right }}_min))
+        market_df[f"{market}_buy_{{ bsys }}_desc"] = "hour(" + buy_mkt_df.index.hour.astype(str) + ") == {{ buy_systems[bsys].right }}_hour (" + str(self.{{ buy_systems[bsys].right }}_hour) + ") & minute (" + buy_mkt_df.index.minute.astype(str) + ") == {{ buy_systems[bsys].right }}_min(" + str(self.{{ buy_systems[bsys].right }}_min)+")"
+        {% endif %}
+        {% endfor %}
+
+{#        {% for bsys in buy_systems -%}market_df[f"{market}_buy_{{ bsys }}"]  = {% if buy_systems[bsys].left != "time" %}  buy_mkt_df[f"{market}_{{ buy_systems[bsys].left }}"]  {{ buy_systems[bsys].op }} {% set tokens = parse_exp(buy_systems[bsys].right) %} {% if len(tokens) > 1 %} ( {% for token in tokens -%} {% if is_col_name(token) %} buy_mkt_df[f"{market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ) {% else %} {% if is_col_name(buy_systems[bsys].right) %} buy_mkt_df[f"{market}_{{ buy_systems[bsys].right }}"] {% else %} {{ buy_systems[bsys].right }} {% endif %} {% endif %}  {% else %} ((buy_mkt_df.index.hour == self.{{ buy_systems[bsys].right }}_hour) & (buy_mkt_df.index.minute == self.{{ buy_systems[bsys].right }}_min))  {% endif %}#}
+{#        market_df[f"{market}_buy_{{ bsys }}_desc"]  = {% if buy_systems[bsys].left != "time" %}  "{{ buy_systems[bsys].left }}(" + buy_mkt_df[f"{market}_{{ buy_systems[bsys].left }}"].astype(str) + ") {{ buy_systems[bsys].op }} {{ buy_systems[bsys].right }}(" + {% set tokens = parse_exp(buy_systems[bsys].right) %} {% if len(tokens) > 1 %} pd.Series( {% for token in tokens -%} {% if is_col_name(token) %} buy_mkt_df[f"{market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ).astype(str) {% else %}  {% if is_col_name(buy_systems[bsys].right) %} buy_mkt_df[f"{market}_{{ buy_systems[bsys].right }}"].astype(str) {% else %} str({{ buy_systems[bsys].right }}) {% endif %}  {% endif %} + ")" {% else %} "hour(" + buy_mkt_df.index.hour.astype(str) + ") == {{ buy_systems[bsys].right }}_hour (" + str(self.{{ buy_systems[bsys].right }}_hour) + ") & minute (" + buy_mkt_df.index.minute.astype(str) + ") == {{ buy_systems[bsys].right }}_min(" + str(self.{{ buy_systems[bsys].right }}_min)+")" {% endif %}#}
+{#        {% endfor %}#}
+        {% endif %}
+
+        {# ################### system operation ################### #}
+        {% set token_list = parse_op(buy_system_op) %}
+        buy_system = {% for token in token_list %}{% if token == "and" %} & {% elif token == "or" %} | {% elif token == "not" %} super({{ stgy_name }}, self).__not__ {% elif token == "(" %} ( {% elif token == ")" %} ) {% else %} (market_df[f"{market}_buy_{{ token }}"]) {% endif %} {% endfor %}
+        return buy_system
+
+    def get_sell_system(self, market_df, market):
+        sell_mkt_df = super({{ stgy_name }}, self).__get_sell_market_df__(market_df, market)
+        {# ################### system definition ################### #}
+        {% if pt_exec is defined and pt_exec == True %}
+        {# ######## pair trading ######## #}
+        {% for ssys in sell_systems -%}
+        market_df[f"{market}_sell_{{ ssys }}"] = pd.Series(data=[False]*len(market_df.index), index = market_df.index)
+        market_df[f"{market}_sell_{{ ssys }}_desc"] = ""
+        {% endfor %}
+
+        {% for ssys in sell_systems -%}
+        {% if sell_systems[ssys].left != "time" %}
+        {{ ssys }}_tgt_market = self.sell_{{ ssys }}_tgt_market
+        {% else %}
+        {{ ssys }}_tgt_market = market
+        {% endif %}
+
+        {% if sell_systems[ssys].left != "time" %}
+        if {{ ssys }}_tgt_market == market:
+        {% else %}
+        if True :
+        {% endif %}
+            left_market = self.sell_{{ ssys }}_left_market
+            right_market = self.sell_{{ ssys }}_right_market
+
+            market_df[f"{market}_sell_{{ ssys }}"] = {% if sell_systems[ssys].left != "time" %}  sell_mkt_df[f"{left_market}_{{ sell_systems[ssys].left }}"]  {{ sell_systems[ssys].op }} {% set tokens = parse_exp(sell_systems[ssys].right) %} {% if len(tokens) > 1 %} ( {% for token in tokens -%} {% if is_col_name(token) %} sell_mkt_df[f"{right_market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ) {% else %} {% if is_col_name(sell_systems[ssys].right) %} sell_mkt_df[f"{right_market}_{{ sell_systems[ssys].right }}"] {% else %} {{ sell_systems[ssys].right }} {% endif %} {% endif %}  {% else %} ((sell_mkt_df.index.hour == self.{{ sell_systems[ssys].right }}_hour) & (sell_mkt_df.index.minute == self.{{ sell_systems[ssys].right }}_min))  {% endif %}
+            market_df[f"{market}_sell_{{ ssys }}_desc"]  = {% if sell_systems[ssys].left != "time" %}  "{{ sell_systems[ssys].left }}(" + sell_mkt_df[f"{left_market}_{{ sell_systems[ssys].left }}"].astype(str) + "/{left_market}) {{ sell_systems[ssys].op }} {{ sell_systems[ssys].right }}(" + {% set tokens = parse_exp(sell_systems[ssys].right) %} {% if len(tokens) > 1 %} pd.Series( {% for token in tokens -%} {% if is_col_name(token) %} sell_mkt_df[f"{right_market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ).astype(str) {% else %}  {% if is_col_name(sell_systems[ssys].right) %} sell_mkt_df[f"{right_market}_{{ sell_systems[ssys].right }}"].astype(str) {% else %} str({{ sell_systems[ssys].right }}) {% endif %}  {% endif %} + "/{right_market})" {% else %} "hour(" + sell_mkt_df.index.hour.astype(str) + ") == {{ sell_systems[ssys].right }}_hour (" + str(self.{{ sell_systems[ssys].right }}_hour) + ") & minute (" + sell_mkt_df.index.minute.astype(str) + ") == {{ sell_systems[ssys].right }}_min(" + str(self.{{ sell_systems[ssys].right }}_min)+")" {% endif %}
+        {% endfor %}
+
+        {% else %}
+
+        {# ######## general trading ####### #}
+        {% for ssys in sell_systems -%}
+            {% if sell_systems[ssys].left != "time" %}      {# If Not TIME #}
+                {% if sell_systems[ssys].market is defined %}
+        market_df[f"{market}_sell_{{ ssys }}"] = False
+        if market == "{{ sell_systems[ssys].market }}":
+            #market_df.loc[sell_mkt_df[f"{market}_{{ sell_systems[ssys].left }}"]  {{ sell_systems[ssys].op }} {% set tokens = parse_exp(sell_systems[ssys].right) %} {% if len(tokens) > 1 %} ( {% for token in tokens -%} {% if is_col_name(token) %} sell_mkt_df[f"{market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ) {% else %} {% if is_col_name(sell_systems[ssys].right) %} sell_mkt_df[f"{market}_{{ sell_systems[ssys].right }}"] {% else %} {{ sell_systems[ssys].right }} {% endif %} {% endif %}, f"{market}_sell_{{ ssys }}"] = True
+            market_df[f"{market}_sell_{{ ssys }}"] = sell_mkt_df[f"{market}_{{ sell_systems[ssys].left }}"]  {{ sell_systems[ssys].op }} {% set tokens = parse_exp(sell_systems[ssys].right) %} {% if len(tokens) > 1 %} ( {% for token in tokens -%} {% if is_col_name(token) %} sell_mkt_df[f"{market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ) {% else %} {% if is_col_name(sell_systems[ssys].right) %} sell_mkt_df[f"{market}_{{ sell_systems[ssys].right }}"] {% else %} {{ sell_systems[ssys].right }} {% endif %} {% endif %}
+                {% else %}
+        market_df[f"{market}_sell_{{ ssys }}"] = sell_mkt_df[f"{market}_{{ sell_systems[ssys].left }}"]  {{ sell_systems[ssys].op }} {% set tokens = parse_exp(sell_systems[ssys].right) %} {% if len(tokens) > 1 %} ( {% for token in tokens -%} {% if is_col_name(token) %} sell_mkt_df[f"{market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ) {% else %} {% if is_col_name(sell_systems[ssys].right) %} sell_mkt_df[f"{market}_{{ sell_systems[ssys].right }}"] {% else %} {{ sell_systems[ssys].right }} {% endif %} {% endif %}
+                {% endif %}
+        market_df[f"{market}_sell_{{ ssys }}_desc"]  = "{{ sell_systems[ssys].left }}(" + sell_mkt_df[f"{market}_{{ sell_systems[ssys].left }}"].astype(str) + ") {{ sell_systems[ssys].op }} {{ sell_systems[ssys].right }}(" + {% set tokens = parse_exp(sell_systems[ssys].right) %} {% if len(tokens) > 1 %} pd.Series( {% for token in tokens -%} {% if is_col_name(token) %} sell_mkt_df[f"{market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ).astype(str) {% else %} {% if is_col_name(sell_systems[ssys].right) %} sell_mkt_df[f"{market}_{{ sell_systems[ssys].right }}"].astype(str) {% else %} str({{ sell_systems[ssys].right }}) {% endif %} {% endif %} + ")" {% if sell_systems[ssys].market is defined %} + f"_market({market}) == '{{ sell_systems[ssys].market }}'" {% endif %}
+        {% else %}                                           {# If TIME #}
+        market_df[f"{market}_sell_{{ ssys }}"] = ((sell_mkt_df.index.hour == self.{{ sell_systems[ssys].right }}_hour) & (sell_mkt_df.index.minute == self.{{ sell_systems[ssys].right }}_min))
+        market_df[f"{market}_sell_{{ ssys }}_desc"]  = "hour(" + sell_mkt_df.index.hour.astype(str) + ") == {{ sell_systems[ssys].right }}_hour (" + str(self.{{ sell_systems[ssys].right }}_hour) + ") & minute (" + sell_mkt_df.index.minute.astype(str) + ") == {{ sell_systems[ssys].right }}_min(" + str(self.{{ sell_systems[ssys].right }}_min)+")"
+        {% endif %}
+
+        {% endfor %}
+{#        {% for ssys in sell_systems -%}market_df[f"{market}_sell_{{ ssys }}"]  = {% if sell_systems[ssys].left != "time" %}  sell_mkt_df[f"{market}_{{ sell_systems[ssys].left }}"]  {{ sell_systems[ssys].op }} {% set tokens = parse_exp(sell_systems[ssys].right) %} {% if len(tokens) > 1 %} ( {% for token in tokens -%} {% if is_col_name(token) %} sell_mkt_df[f"{market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ) {% else %} {% if is_col_name(sell_systems[ssys].right) %} sell_mkt_df[f"{market}_{{ sell_systems[ssys].right }}"] {% else %} {{ sell_systems[ssys].right }} {% endif %} {% endif %} {% else %} ((sell_mkt_df.index.hour == self.{{ sell_systems[ssys].right }}_hour) & (sell_mkt_df.index.minute == self.{{ sell_systems[ssys].right }}_min))  {% endif %}#}
+{#        market_df[f"{market}_sell_{{ ssys }}_desc"]  = {% if sell_systems[ssys].left != "time" %}  "{{ sell_systems[ssys].left }}(" + sell_mkt_df[f"{market}_{{ sell_systems[ssys].left }}"].astype(str) + ") {{ sell_systems[ssys].op }} {{ sell_systems[ssys].right }}(" + {% set tokens = parse_exp(sell_systems[ssys].right) %} {% if len(tokens) > 1 %} pd.Series( {% for token in tokens -%} {% if is_col_name(token) %} sell_mkt_df[f"{market}_{{ token }}"] {% else %} {{token}} {% endif %} {% endfor %} ).astype(str) {% else %} {% if is_col_name(sell_systems[ssys].right) %} sell_mkt_df[f"{market}_{{ sell_systems[ssys].right }}"].astype(str) {% else %} str({{ sell_systems[ssys].right }}) {% endif %} {% endif %} + ")" {% else %} "hour(" + sell_mkt_df.index.hour.astype(str) + ") == {{ sell_systems[ssys].right }}_hour (" + str(self.{{ sell_systems[ssys].right }}_hour) + ") & minute (" + sell_mkt_df.index.minute.astype(str) + ") == {{ sell_systems[ssys].right }}_min(" + str(self.{{ sell_systems[ssys].right }}_min)+")" {% endif %}#}
+{#        {% endfor %}#}
+
+        {% endif %}
+
+        {# ################### system operation ################### #}
+        {% if sell_system_op is defined %}
+        {% set token_list = parse_op(sell_system_op) %}
+        sell_system = {% for token in token_list %}{% if token == "and" %} & {% elif token == "or" %} | {% elif token == "not" %} super({{ stgy_name }}, self).__not__ {% elif token == "(" %} ( {% elif token == ")" %} ) {% else %} (market_df[f"{market}_sell_{{ token }}"]) {% endif %} {% endfor %}
+        {% else %}
+        sell_system = pd.Series(data=[False]*len(market_df.index), index = market_df.index)
+        {% endif %}
+        return sell_system
+
+{#    def get_filter_hour_min_in_base_cdl(self, market_df):#}
+{#        {% set time_vars = extract_time_vars(vars) %}#}
+{#        return {% if len(time_vars) > 0 %} ((market_df.index.hour == self.close_hour) & (market_df.index.minute == self.close_minute)) | \{% else %} None {% endif %}#}
+{#            {% for var in time_vars -%} ((market_df.index.hour == self.{{var}}_hour) & (market_df.index.minute == self.{{var}}_min)) {% if not loop.last %}|{% endif %}{% endfor %}#}
+
+    def get_var_candle_types(self):
+        return sorted(set([{% for var in vars -%}{% if not var.startswith("ga_") %}{% if vars[var] is mapping %}{{ vars[var].cdl_type }}, {% if "ga_cdl_types" in vars[var]%}{% for ga_cdl_type in vars[var]["ga_cdl_types"] %}{{ ga_cdl_type }},{% endfor %}{% endif %} {% endif %}{% endif %}{% endfor %}]))
