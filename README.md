@@ -2,6 +2,59 @@
 
 유전 프로그래밍(Genetic Programming)을 사용하여 거래 전략 규칙을 자동 생성하는 프로젝트입니다. DEAP 라이브러리를 활용하여 기술적 지표 기반의 매수/매도 시스템을 진화시킵니다.
 
+---
+
+## 🧪 파이썬 최적화 과제 (Before / After)
+
+이 저장소는 **수업 과제: 연구 코드 성능·구조 개선**의 결과물을 포함합니다. 최적화 **전/후**
+코드와 정량 벤치마크, 보고서를 함께 제공합니다.
+
+### 디렉터리 구조
+```
+src/before/      # 최적화 전 코드 스냅샷 (로직 verbatim, import 접두사만 패키지에 맞춰 rebase)
+src/after/       # 최적화 후 코드 (자료구조/제너레이터/클래스/데코레이터 적용)
+src/synthetic.py # before/after 공유 결정적 합성 평가기 (외부 bt4 엔진 없이 재현 가능)
+benchmark/run_benchmark.py   # 전/후 비교 벤치마크 (마이크로 + 매크로)
+results/         # benchmark_results.csv, env.json, *.png (실측 결과)
+tests/test_optimization.py   # 전/후 동작 등가성·결정성·캐시 검증
+report/report.pdf            # 보고서
+```
+> 전/후 비교는 `src/before` ↔ `src/after` 폴더로 확인할 수 있으며, 최적화 전 코드는
+> `before-baseline` git 태그로도 보존됩니다.
+
+### 환경 구축 & 실행
+```bash
+# Python 3.10+ 권장 (numpy 2.3.x 요구). uv 사용 예:
+uv venv --python 3.11 .venv
+uv pip install -r requirements.txt
+
+# 1) 최적화 후 데모 실행 (합성 평가기, end-to-end)
+.venv/bin/python -m src.after.main
+
+# 2) 전/후 벤치마크 (결과 → results/)
+.venv/bin/python benchmark/run_benchmark.py          # 전체
+.venv/bin/python benchmark/run_benchmark.py --quick  # 빠른 확인
+
+# 3) 동작 등가성 테스트
+.venv/bin/python -m pytest tests/test_optimization.py -v
+```
+
+### 핵심 결과 (요약)
+| 대상 | 향상 | 적용 개념 |
+|---|---|---|
+| `extract_base_indicator_name` (5만 회) | **10.4×** | `functools.lru_cache` |
+| `parse_gp_tree_to_json` | **1.23×** | `str(tree)` 1회화 + 정규식 사전컴파일 + 중복 제거 |
+| `validate_and_clean_strategy` | **1.13×** | `frozenset` membership |
+| 전체 진화 (매크로) | **1.18×** | 위 개선의 누적 |
+
+모든 벤치마크 행에서 before/after 출력·best-fitness 궤적의 **동일성**을 assert 합니다(회귀 게이트).
+
+> **참고**: 실제 적합도 평가는 외부 독점 엔진 `bt4_trader` 에 의존해 재현이 불가능하므로,
+> 과제 지침(synthetic 허용)에 따라 `src/synthetic.py` 의 결정적 합성 평가기를 사용합니다.
+> 실제 엔진(`BT4BacktestEvaluator`)은 동일 `BacktestEvaluator` Protocol 로 보존되어 있습니다.
+
+---
+
 ## ✨ 주요 기능
 
 ### 🧬 유전 프로그래밍 기반 전략 생성
