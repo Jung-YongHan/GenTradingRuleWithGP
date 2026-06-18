@@ -204,7 +204,7 @@ small {{ color:#6a737d; }}
     <b>대상 코드</b> : GenTradingRuleWithGP (DEAP 기반 GP 거래전략 생성)<br>
     <b>학번</b> : {student_id}<br>
     <b>이름</b> : {student_name}<br>
-    <b>제출일</b> : 2026-06-21
+    <b>제출일</b> : 2026-06-18
   </div>
 </div>
 
